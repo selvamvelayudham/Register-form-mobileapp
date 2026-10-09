@@ -60,24 +60,19 @@ npm run lint
 
 Validation tests cover contact numbers, rural/urban location requirements, member ages and work locations, engagement categories, dynamic required fields and scoped submission payloads. See `VALIDATION.md` for the actual build and runtime verification results.
 
-## Push to the requested repository
+## Repository updates
 
-Target: https://github.com/selvamvelayudham/Register-form-mobileapp.git
+Repository: https://github.com/selvamvelayudham/Register-form-mobileapp.git
 
-The connected GitHub integration reported `push: false` during creation. No remote push was claimed. The repository owner must grant your GitHub account Write access and make the repository available to the connected GitHub app before an authenticated push can succeed.
+This repository stores the app in `SangamMobile`. Run npm commands from that folder, and open `SangamMobile/android` in Android Studio. The Android APK workflow is stored at the repository root, under `.github/workflows`.
 
-For an empty repository, from the extracted folder:
+After pulling a render fix, stop Metro and restart it with:
 
 ```powershell
-git init
-git add .
-git commit -m "Add Sangam React Native Android registration app"
-git branch -M main
-git remote add origin https://github.com/selvamvelayudham/Register-form-mobileapp.git
-git push -u origin main
+npm start -- --reset-cache
 ```
 
-If the remote has work by then, clone it first and copy the project files into that checkout before committing. Do not force push.
+Then run `npm run android` in another terminal. ESLint checks that UI text and explicit space strings stay inside React Native `<Text>` components.
 
 ## Source and configuration
 

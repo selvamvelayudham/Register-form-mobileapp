@@ -527,7 +527,7 @@ function Reports({ token, open }: any) {
           }}
         />
       </View>
-      {error && <ErrorBox error={error} retry={() => setRetry(r => r + 1)} />}{' '}
+      {error && <ErrorBox error={error} retry={() => setRetry(r => r + 1)} />}
       {loading ? (
         <Loading label="Loading reports…" />
       ) : (

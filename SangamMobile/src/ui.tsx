@@ -457,14 +457,14 @@ function SelectInner({
                 {loading && <Loading />}
                 {error && (
                   <ErrorBox error={error} retry={() => setRetry(r => r + 1)} />
-                )}{' '}
+                )}
                 {!loading && !error && page < pages && (
                   <Button
                     title="Load more options"
                     secondary
                     onPress={() => setPage(p => p + 1)}
                   />
-                )}{' '}
+                )}
                 {allowUnlisted && (
                   <Button
                     title="My location is not listed"

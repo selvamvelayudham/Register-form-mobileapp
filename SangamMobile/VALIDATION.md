@@ -1,5 +1,17 @@
 # Verification results
 
+## Current render-error fix — 9 October 2026
+
+Removed four loose whitespace strings outside Text components: two in the dropdown footer, one in reports and one in the form editor. The no-raw-text lint rule detects all four in the previous commit and rejects this pattern going forward.
+
+Current checks: TypeScript passed; 11 Jest tests passed in three suites; ESLint passed with zero errors and 25 warnings. The Android release build (`assembleRelease`) succeeded with 104 tasks executed. Its embedded Hermes bundle and Android v2 signature were verified; the signing certificate matches the initial APK. The GitHub APK workflow was moved to the repository root and configured for the SangamMobile app directory.
+
+Fixed APK: `Sangam-Registration-Fixed.apk` (46,387,575 bytes), package `tech.shreeswayam.sangam`, version 1.0, minimum API 24, target API 36. SHA-256: `97bd4d4186545d3d04431d80eb72d7871448d73ed50829bef39a47b0a524596b`. It uses the same test signing key as the initial APK.
+
+No native Android code, API routes or database behaviour was changed in this fix. The original APK below predates this render fix; use the fixed APK, a successful new GitHub Actions build or rebuild from the updated source. Live authenticated admin/submission testing still requires your account. The fixed APK was built and signature-checked but has not been tested on a device.
+
+## Initial APK checks (before the render fix)
+
 Validated on 9 October 2026.
 
 | Check | Result |

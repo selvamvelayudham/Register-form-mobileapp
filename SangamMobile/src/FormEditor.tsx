@@ -214,7 +214,7 @@ export default function FormEditor({ community, token }: any) {
                   disabled={busy}
                   onChange={(x: string) => updateField(i, { type: x })}
                 />
-              )}{' '}
+              )}
               {['select', 'checkbox-group'].includes(f.type) && (
                 <Input
                   label="Choices (one per line)"

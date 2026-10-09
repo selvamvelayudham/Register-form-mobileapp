@@ -146,19 +146,26 @@ describe('registration validation and backend payload', () => {
 });
 
 describe('administrative type submission', () => {
-  test('prevents unmatched typed post offices from being silently dropped by the API', () => {
-    expect(
-      fieldError(
-        { type: 'location' },
-        { ...blank(), postOffice: 'Example office' },
-      ),
-    ).toMatch('directory');
-    expect(
-      fieldError(
-        { type: 'location' },
-        { ...blank(), postOffice: 'Example office', postOfficeId: 'office' },
-      ),
-    ).toBe('');
+  test('preserves Pidagai in the accepted address and removes post office payload', () => {
+    const result = submission(
+      {
+        ...blank(),
+        address: '12 Main Road',
+        pitagaiName: 'North Pidagai',
+        postOffice: 'Old office',
+        postOfficeId: 'old-id',
+      },
+      { _id: 'community', slug: 'krishnan-community' },
+      [
+        {
+          fields: [{ key: 'address', type: 'textarea' }, { type: 'location' }],
+        },
+      ],
+    );
+    expect(result.address).toBe('12 Main Road\nPidagai: North Pidagai');
+    expect(result.pitagaiName).toBe('North Pidagai');
+    expect(result.postOffice).toBeUndefined();
+    expect(result.postOfficeId).toBeUndefined();
   });
   const sections = [{ fields: [{ type: 'location' }] }];
   const community = { _id: 'community', slug: 'krishnan-community' };

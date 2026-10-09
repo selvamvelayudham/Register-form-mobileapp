@@ -29,7 +29,36 @@ const select = (tree: ReactTestRenderer, label: string) =>
   tree.root.findAllByType(Select).find(x => x.props.label === label)!;
 
 describe('residential location changes', () => {
-  test('locks Tamil Nadu, removes area type, and accepts ward, PIN and post office as text inputs', () => {
+  test('one village selection supplies the required rural identity without a separate habitation control', () => {
+    let tree!: ReactTestRenderer;
+    act(() => {
+      tree = create(
+        <Screen
+          seed={{
+            ...blank(),
+            districtId: 'district',
+            blockId: 'block',
+            villagePanchayatId: 'panchayat',
+          }}
+        />,
+      );
+    });
+    act(() =>
+      select(tree, 'Village').props.onSelect({
+        _id: 'master-village-id',
+        nameEnglish: 'Selected village',
+      }),
+    );
+    expect(tree.root.findByType(LocationFields).props.values).toMatchObject({
+      villageName: 'Selected village',
+      habitationId: 'master-village-id',
+      villageSameAsHabitation: true,
+      villageChoiceId: '',
+    });
+    expect(select(tree, 'Habitation / Hamlet')).toBeUndefined();
+    act(() => tree.unmount());
+  });
+  test('locks Tamil Nadu, removes area type, and accepts ward, PIN as text inputs and removes post office and habitation', () => {
     let tree!: ReactTestRenderer;
     act(() => {
       tree = create(<Screen seed={{ ...blank(), districtId: 'district' }} />);
@@ -52,8 +81,8 @@ describe('residential location changes', () => {
     expect(input(tree, 'Ward number').props.value).toBe('12');
     act(() => input(tree, 'PIN code').props.onChange('60a00012'));
     expect(input(tree, 'PIN code').props.value).toBe('600001');
-    act(() => input(tree, 'Post office').props.onChange('Chennai GPO'));
-    expect(input(tree, 'Post office').props.value).toBe('Chennai GPO');
+    expect(input(tree, 'Post office')).toBeUndefined();
+    expect(select(tree, 'Habitation / Hamlet')).toBeUndefined();
     act(() => tree.unmount());
   });
 
@@ -65,6 +94,7 @@ describe('residential location changes', () => {
           seed={{
             ...blank(),
             districtId: 'district',
+            district: 'Erode',
             blockId: 'block',
             villagePanchayatId: 'panchayat',
             habitationId: 'hamlet',
@@ -82,12 +112,10 @@ describe('residential location changes', () => {
     ).toBe(false);
     const city = select(tree, 'Municipality — City / town');
     expect(city.props.value).toBe('');
-    expect(city.props.params).toMatchObject({
-      kind: 'village',
-      districtId: 'district',
-      blockId: '',
-      villagePanchayatId: '',
-    });
+    expect(city.props.endpoint).toBeUndefined();
+    expect(city.props.items.some((x: any) => x.nameEnglish === 'Bhavani')).toBe(
+      true,
+    );
     expect(input(tree, 'Ward number').props.value).toBe('');
     act(() =>
       city.props.onSelect({ _id: 'city', nameEnglish: 'Example city' }),
@@ -97,6 +125,11 @@ describe('residential location changes', () => {
     );
     act(() => input(tree, 'Administrative type').props.onChange('Corporation'));
     expect(select(tree, 'Corporation — City / town').props.value).toBe('');
+    expect(
+      select(tree, 'Corporation — City / town').props.items.map(
+        (x: any) => x.nameEnglish,
+      ),
+    ).toContain('Erode');
     act(() =>
       select(tree, 'Corporation — City / town').props.onSelect({
         _id: '',
@@ -109,7 +142,7 @@ describe('residential location changes', () => {
       input(tree, 'Administrative type').props.onChange('Village Panchayat'),
     );
     expect(select(tree, 'Block').props.value).toBe('');
-    expect(select(tree, 'Village / Hamlet').props.disabled).toBe(true);
+    expect(select(tree, 'Village').props.disabled).toBe(true);
     act(() => tree.unmount());
   });
 });

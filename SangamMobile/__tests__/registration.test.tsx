@@ -41,6 +41,12 @@ const form = {
           required: true,
           order: 2,
         },
+        {
+          key: 'address',
+          label: 'Residential address',
+          type: 'textarea',
+          order: 3,
+        },
       ],
     },
   ],
@@ -89,6 +95,10 @@ describe('native registration screens', () => {
       .find(x => x.props.label === 'COMMUNITY');
     expect(selector?.props.value).toBe('Krishavaha');
     expect(selector?.props.disabled).toBe(true);
+    const inputs = tree.root.findAllByType(Input).map(x => x.props.label);
+    expect(inputs.indexOf('Pidagai')).toBe(
+      inputs.indexOf('Residential address') + 1,
+    );
     expect(tree.root.findAllByType(Select)).toHaveLength(0);
     act(() => press(tree, 'Continue →'));
     expect(Alert.alert).toHaveBeenCalledWith(

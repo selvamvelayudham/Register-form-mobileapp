@@ -30,4 +30,6 @@ The loose whitespace strings that caused `Text strings must be rendered within a
 
 ## Locked registration and administrative location UI
 
-Public registration is locked to **Krishavaha** and **Tamil Nadu**. PIN, ward and post office use text inputs; administrative type controls village/town entry and resets dependent locations. See the [app guide](SangamMobile/README.md#registration-changes--9-october-2026) for the API compatibility rules and outstanding backend requirements.
+Public registration is locked to **Krishavaha** and **Tamil Nadu**. PIN and ward use text inputs; Pidagai follows the address; post office and separate habitation controls are removed; administrative type controls village/town entry and resets dependent locations. See the [app guide](SangamMobile/README.md#current-registration-ui) for the API compatibility rules and outstanding backend requirements.
+
+Urban dropdowns now use bundled LGD records filtered by district and type. See [directory provenance](SangamMobile/src/data/README.md).

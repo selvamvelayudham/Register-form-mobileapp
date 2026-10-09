@@ -84,14 +84,14 @@ API base URL is in `src/api.ts`. Native Android document saving and session encr
 
 The Android scaffold is based on the MIT-licensed React Native Community template 0.81.5. Its license is in `LICENSE-React-Native-Template`.
 
-## Registration changes — 9 October 2026
+## Current registration UI
 
-Public registration displays **Krishavaha**, using the existing community ID/slug so records and authentication remain connected. Tamil Nadu is fixed and disabled. Settings for preparing a later app for another community are in `src/registrationConfig.ts`; this does not rename the server's community or PDF branding.
+Public registration displays **Krishavaha**, using the existing `krishnan-community` ID/slug. Tamil Nadu is fixed and disabled. Settings for another community build are in `src/registrationConfig.ts`.
 
-Administrative type offers Village Panchayat, Town Panchayat, Municipality and Corporation. Village Panchayat uses block → panchayat → village/habitation masters. The other types use district-scoped town choices and allow manual entry for an unlisted city. Switching type or district clears dependent choices. The old Rural/Urban selector is removed; the API-compatible settlement value is derived automatically.
+**Pidagai** is a text input immediately after residential address. It is included in review and submission under `pitagaiName`. Until the backend publishes that dedicated field, the app also preserves it as a `Pidagai:` line in the accepted address field, so it remains in stored records and PDF receipts. If the published form includes `pitagaiName`, the address fallback is omitted.
 
-PIN code, ward number and post office are text inputs. PIN remains six digits; an optional ward must be 1–999. Post office is optional and resolves its directory ID by an exact name match within the entered PIN. Unmatched names cannot be submitted because the existing API does not save free-text post offices unless the published form includes that field.
+Post office and the separate Hamlet/Habitation control are removed, including review and receipt details in the app. Removed post-office values/IDs are stripped from new submissions. Rural users select block, village panchayat and **Village** once; this selection carries the existing master habitation ID internally because the current API requires it. No separate habitation selection is needed. Existing server PDFs for historical records are unchanged.
 
-### Backend requirements still outstanding
+Administrative type offers Village Panchayat, Town Panchayat, Municipality and Corporation. Town/city dropdowns use a bundled LGD snapshot filtered by selected district and exact administrative type, instead of the empty shared backend list. Changing type or district clears dependent IDs and values. PIN remains a six-digit text input and optional ward is 1–999. Rural/Urban is derived automatically for the API and has no visible dropdown.
 
-The current API has no administrative-type categorization for urban location choices: Town Panchayat, Municipality and Corporation share the district's available town list. It also does not persist `localBody` from the location widget in the current published form. The mobile app sends this value, but saving it requires a backend/published-form change. Separate city lists require categorized server master data. Arbitrary free-text post-office persistence and renaming the server community/PDF branding also require server changes. No backend/database changes or deployments are part of this mobile repository update.
+See [urban directory provenance](src/data/README.md) for source files, record counts, snapshot caveats and refresh instructions. The app has 650 mapped urban records; manually enter a location if a recent change is missing. The server still needs a published `localBody` field to store administrative type separately, a dedicated published `pitagaiName` field to save Pidagai separately, and a community rename for server PDF branding. Those server changes are outside this mobile repository update.

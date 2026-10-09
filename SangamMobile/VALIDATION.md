@@ -1,5 +1,12 @@
 # Verification results
 
+## Pidagai, removed fields and urban lists — 10 October 2026
+
+Pidagai is immediately after address and is preserved in the API-accepted address until its dedicated field is published. Post-office controls/validation/payload are removed. No separate Hamlet/Habitation control is rendered; one village selection supplies the current backend's required internal habitation ID.
+
+Town/city dropdowns now use the 9 October LGD snapshot: 650 mapped local bodies classified separately as town panchayat, municipality or corporation. Live district-name aliases are supported, including Tiruvallur, Tiruvarur and Sivagangai. New tests cover district/type separation, unique IDs and provenance, Pidagai placement/payload, removed fields and clearing stale selections. Final checks: 22 tests passed in five suites; TypeScript passed; ESLint passed with zero errors and 25 pre-existing warnings; Android production JavaScript bundle generated successfully. This change has not been built into an APK or tested on a device; the previous APK predates these changes.
+
+
 ## Locked registration and location UI — 9 October 2026
 
 Tamil Nadu and public Krishavaha registration are locked. Administrative type replaces the Rural/Urban control; changing it clears dependent IDs and names. PIN, ward and post office use text inputs. The API's existing settlement value is derived from administrative type, and typed post offices are matched by PIN and directory name before submission.

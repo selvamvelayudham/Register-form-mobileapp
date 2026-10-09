@@ -331,12 +331,24 @@ export function RegistrationField({
     Object.entries(f).filter(([key]) => key !== 'key'),
   );
   return (
-    <Input
-      {...inputProps}
-      value={v[f.key]}
-      disabled={disabled}
-      onChange={(x: any) => change({ [f.key]: x })}
-    />
+    <>
+      <Input
+        {...inputProps}
+        maxLength={f.key === 'address' ? 430 : f.maxLength}
+        value={v[f.key]}
+        disabled={disabled}
+        onChange={(x: any) => change({ [f.key]: x })}
+      />
+      {f.key === 'address' && (
+        <Input
+          label="Pidagai"
+          value={v.pitagaiName}
+          maxLength={160}
+          disabled={disabled}
+          onChange={(x: string) => change({ pitagaiName: x })}
+        />
+      )}
+    </>
   );
 }
 export function RecordDetails({ record }: any) {
@@ -351,6 +363,7 @@ export function RecordDetails({ record }: any) {
     ],
     'Residential information': [
       'address',
+      'pitagaiName',
       'state',
       'district',
       'localBody',
@@ -359,11 +372,9 @@ export function RecordDetails({ record }: any) {
       'villagePanchayat',
       'villagePanchayatNameTamil',
       'villageName',
-      'habitation',
       'wardNumber',
       'streetArea',
       'postalCode',
-      'postOffice',
     ],
     'Household information': [
       'housingType',
@@ -646,6 +657,15 @@ export default function Registration({
                 fieldsOf(section)
                   .filter(
                     (f: any) =>
+                      f.key !== 'postOffice' &&
+                      f.key !== 'habitation' &&
+                      !(
+                        f.key === 'pitagaiName' &&
+                        fieldsOf(section).some((x: any) => x.key === 'address')
+                      ),
+                  )
+                  .filter(
+                    (f: any) =>
                       !(
                         fieldsOf(section).some(
                           (x: any) => x.type === 'location',
@@ -655,7 +675,6 @@ export default function Registration({
                           'taluk',
                           'wardNumber',
                           'postalCode',
-                          'postOffice',
                           'state',
                           'stateCode',
                           'settlementType',
@@ -686,33 +705,40 @@ export default function Registration({
                           onPress={() => go(i)}
                         />
                       </View>
-                      {fieldsOf(sec).map((f: any) => (
-                        <View key={f.key}>
-                          <Text style={s.muted}>{f.label}</Text>
-                          <Text selectable style={s.text}>
-                            {f.type === 'location'
-                              ? display(
-                                  Object.fromEntries(
-                                    [
-                                      'state',
-                                      'district',
-                                      'localBody',
-                                      'taluk',
-                                      'block',
-                                      'villagePanchayat',
-                                      'villageName',
-                                      'habitation',
-                                      'wardNumber',
-                                      'streetArea',
-                                      'postalCode',
-                                      'postOffice',
-                                    ].map(k => [k, values[k]]),
-                                  ),
-                                )
-                              : display(values[f.key])}
-                          </Text>
-                        </View>
-                      ))}
+                      {fieldsOf(sec)
+                        .filter(
+                          (f: any) =>
+                            !['postOffice', 'habitation'].includes(f.key),
+                        )
+                        .map((f: any) => (
+                          <View key={f.key}>
+                            <Text style={s.muted}>{f.label}</Text>
+                            <Text selectable style={s.text}>
+                              {f.type === 'location'
+                                ? display(
+                                    Object.fromEntries(
+                                      [
+                                        'state',
+                                        'district',
+                                        'localBody',
+                                        'taluk',
+                                        'block',
+                                        'villagePanchayat',
+                                        'villageName',
+                                        'wardNumber',
+                                        'streetArea',
+                                        'postalCode',
+                                      ].map(k => [k, values[k]]),
+                                    ),
+                                  )
+                                : f.key === 'address' && values.pitagaiName
+                                ? `${display(values.address)}\nPidagai: ${
+                                    values.pitagaiName
+                                  }`
+                                : display(values[f.key])}
+                            </Text>
+                          </View>
+                        ))}
                       <View style={s.divider} />
                     </View>
                   ))}

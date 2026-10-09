@@ -41,6 +41,7 @@ export const blank = () => ({
   members: [{ name: '', relationship: 'Self', age: '' }],
   support: { needed: false, categories: [], priority: 'Routine', details: '' },
   contribution: { willing: false, categories: [], details: '' },
+  pitagaiName: '',
   consent: false,
 });
 export const fieldsOf = (section: any) =>
@@ -56,8 +57,6 @@ export const validPhone = (v: any) =>
 export function fieldError(f: any, v: any): string {
   const value = v[f.key];
   if (f.type === 'location') {
-    if (v.postOffice?.trim() && !v.postOfficeId)
-      return 'Enter a post office name matching the directory for this PIN code, wait for it to be checked, or leave it blank.';
     if (v.localBody && !ADMINISTRATIVE_TYPES.includes(v.localBody))
       return 'Select a valid administrative type.';
     if (v.wardNumber && !/^[1-9]\d{0,2}$/.test(v.wardNumber))
@@ -148,8 +147,20 @@ export function submission(values: any, community: any, sections: any[]) {
   const hasLocation = sections.some(s =>
     fieldsOf(s).some((f: any) => f.type === 'location'),
   );
+  const hasPidagaiField = sections.some(s =>
+    fieldsOf(s).some((f: any) => f.key === 'pitagaiName'),
+  );
   const result = {
     ...values,
+    // The live form does not yet publish pitagaiName. Preserve the entered
+    // value in its accepted address field as well, including PDF receipts.
+    ...(!hasPidagaiField && values.pitagaiName?.trim()
+      ? {
+          address: `${
+            values.address || ''
+          }\nPidagai: ${values.pitagaiName.trim()}`.trim(),
+        }
+      : {}),
     ...(hasLocation
       ? {
           state: REGISTRATION_STATE.name,
@@ -164,6 +175,9 @@ export function submission(values: any, community: any, sections: any[]) {
     communitySlug: community.slug,
     communityId: community._id,
   };
+  delete result.postOffice;
+  delete result.postOfficeId;
+  delete result.postOfficeSourceKey;
   if (
     !sections.some(s => fieldsOf(s).some((f: any) => f.type === 'location'))
   ) {

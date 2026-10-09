@@ -1,5 +1,13 @@
 # Verification results
 
+## Locked registration and location UI — 9 October 2026
+
+Tamil Nadu and public Krishavaha registration are locked. Administrative type replaces the Rural/Urban control; changing it clears dependent IDs and names. PIN, ward and post office use text inputs. The API's existing settlement value is derived from administrative type, and typed post offices are matched by PIN and directory name before submission.
+
+Verification: 18 tests passed in four suites; TypeScript passed; ESLint passed with zero errors and 25 pre-existing warnings. The Android production JavaScript bundle generated successfully. Tests cover locked community/state, input editing, rural/urban transitions, stale selection clearing, district-scoped choices, manual city fallback and payload compatibility. This update has not been built into a new APK or tested on a physical device.
+
+Backend limitations are described in the app README: no separate urban administrative directories or persistence of the administrative type in the current published form, no arbitrary post-office text persistence, and no server community/PDF rename.
+
 ## Current render-error fix — 9 October 2026
 
 Removed four loose whitespace strings outside Text components: two in the dropdown footer, one in reports and one in the form editor. The no-raw-text lint rule detects all four in the previous commit and rejects this pattern going forward.

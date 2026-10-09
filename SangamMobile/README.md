@@ -5,7 +5,7 @@ Native React Native CLI app. **No Expo and no WebView.** Connects directly to th
 ## Screens and behaviour
 
 - Sangam registration branding, colours, section navigation and review adapted from the existing React frontend.
-- Community selector and live published forms, including custom questions, required fields, hidden sections, dropdowns and multiple-choice benefits.
+- Locked Krishavaha registration (existing `krishnan-community` ID) and live published forms, including custom questions, required fields, hidden sections, dropdowns and multiple-choice benefits.
 - Parent-filtered state → district → taluk/block → panchayat → village/habitation lists, rural and urban entry, wards, streets, PIN lookup and post offices. Search and pagination use the backend master directory.
 - Family members (up to 100), conditional work locations, household information, support requests, contributions and consent.
 - Submission through the existing `/families` endpoint and PDF receipt download through Android’s Save As picker. Receipt authentication uses the backend’s 24-hour receipt token.
@@ -13,7 +13,7 @@ Native React Native CLI app. **No Expo and no WebView.** Connects directly to th
 - District/community report filters, totals, pagination and summary/family/member CSV export.
 - Community administrator form editor: section and question editing, draft saving, native preview and publishing. Form editor actions respect backend permissions. Managers have read access because the existing backend does not grant them `forms:write`.
 
-Form answers remain in memory until submission. Changing community prompts before clearing answers. Admin data and credentials are not bundled in the APK. The API remains the authority for access control and validation.
+Form answers remain in memory until submission. Public registration is locked to Krishavaha; admin form previews may still preview other communities. Admin data and credentials are not bundled in the APK. The API remains the authority for access control and validation.
 
 ## Run on your Windows computer
 
@@ -83,3 +83,15 @@ Inspected source commit: `0dfc6a9ff1e895078cf8c24bc22769c7b07d6ba3`. Published f
 API base URL is in `src/api.ts`. Native Android document saving and session encryption are in `android/app/src/main/java/com/sangam/SangamDevice.kt`. This deliverable targets Android; an iOS-specific file/session implementation would be needed for iOS.
 
 The Android scaffold is based on the MIT-licensed React Native Community template 0.81.5. Its license is in `LICENSE-React-Native-Template`.
+
+## Registration changes — 9 October 2026
+
+Public registration displays **Krishavaha**, using the existing community ID/slug so records and authentication remain connected. Tamil Nadu is fixed and disabled. Settings for preparing a later app for another community are in `src/registrationConfig.ts`; this does not rename the server's community or PDF branding.
+
+Administrative type offers Village Panchayat, Town Panchayat, Municipality and Corporation. Village Panchayat uses block → panchayat → village/habitation masters. The other types use district-scoped town choices and allow manual entry for an unlisted city. Switching type or district clears dependent choices. The old Rural/Urban selector is removed; the API-compatible settlement value is derived automatically.
+
+PIN code, ward number and post office are text inputs. PIN remains six digits; an optional ward must be 1–999. Post office is optional and resolves its directory ID by an exact name match within the entered PIN. Unmatched names cannot be submitted because the existing API does not save free-text post offices unless the published form includes that field.
+
+### Backend requirements still outstanding
+
+The current API has no administrative-type categorization for urban location choices: Town Panchayat, Municipality and Corporation share the district's available town list. It also does not persist `localBody` from the location widget in the current published form. The mobile app sends this value, but saving it requires a backend/published-form change. Separate city lists require categorized server master data. Arbitrary free-text post-office persistence and renaming the server community/PDF branding also require server changes. No backend/database changes or deployments are part of this mobile repository update.

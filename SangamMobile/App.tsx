@@ -17,7 +17,6 @@ import Registration from './src/Registration';
 import Admin from './src/Admin';
 export default function App() {
   const [screen, setScreen] = useState('register'),
-    [slug, setSlug] = useState('krishnan-community'),
     [session, setSession] = useState<any>(null),
     [restoring, setRestoring] = useState(true),
     [username, setUsername] = useState('Adminshree'),
@@ -131,16 +130,13 @@ export default function App() {
             <Loading label="Preparing Sangam…" />
           ) : screen === 'register' ? (
             <Registration
-              key={slug}
-              initialSlug={slug}
               onAdmin={() => setScreen(session ? 'admin' : 'login')}
             />
           ) : screen === 'admin' && session ? (
             <Admin
               session={session}
               onLogout={logout}
-              onRegister={(x: string) => {
-                setSlug(x);
+              onRegister={() => {
                 setScreen('register');
               }}
             />

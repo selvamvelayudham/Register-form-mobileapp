@@ -1,6 +1,11 @@
 import React, { useEffect } from 'react';
 import { Text, View } from 'react-native';
-import { api } from './api';
+import { api, query } from './api';
+import {
+  ADMINISTRATIVE_TYPES,
+  REGISTRATION_STATE,
+  isRuralAdministration,
+} from './registrationConfig';
 import { Input, Select, s } from './ui';
 const children = [
   'districtId',
@@ -52,27 +57,46 @@ export default function LocationFields({
   useEffect(() => {
     if (!/^[1-9]\d{5}$/.test(pin)) return;
     const ctrl = new AbortController();
-    const t = setTimeout(
-      () =>
-        api(
+    const t = setTimeout(async () => {
+      try {
+        const data = await api(
           `/master/pincodes?search=${pin}&limit=100`,
           {},
           'GET',
           undefined,
           ctrl.signal,
-        )
-          .then(data => {
-            const x = data.items.find((r: any) => r.code === pin);
-            change({ pincodeId: x?._id || '' });
-          })
-          .catch(() => {}),
-      250,
-    );
+        );
+        if (ctrl.signal.aborted) return;
+        const entry = data.items.find((r: any) => r.code === pin);
+        change({ pincodeId: entry?._id || '', postOfficeId: '' });
+        if (!entry || !v.postOffice?.trim()) return;
+        const offices = await api(
+          `/master/post-offices?${query({
+            pincodeId: entry._id,
+            search: v.postOffice.trim(),
+            limit: 100,
+          })}`,
+          {},
+          'GET',
+          undefined,
+          ctrl.signal,
+        );
+        if (ctrl.signal.aborted) return;
+        const office = offices.items.find(
+          (r: any) =>
+            (r.nameEnglish || r.name || '').trim().toLowerCase() ===
+            v.postOffice.trim().toLowerCase(),
+        );
+        if (office) change({ postOfficeId: office._id });
+      } catch {
+        // Typed values remain editable if the directory is unavailable.
+      }
+    }, 250);
     return () => {
       clearTimeout(t);
       ctrl.abort();
     };
-  }, [pin, change]);
+  }, [pin, v.postOffice, change]);
   const local = (kind: string) => ({
     kind,
     communitySlug: slug,
@@ -81,7 +105,8 @@ export default function LocationFields({
     villagePanchayatId: kind === 'taluk' ? undefined : v.villagePanchayatId,
     habitationId: kind === 'street' ? v.habitationId : undefined,
   });
-  const rural = v.settlementType !== 'Urban';
+  const administrativeType = v.localBody || 'Village Panchayat';
+  const rural = isRuralAdministration(administrativeType);
   const choose = (id: string, key: string, x: any, clear: string[] = []) =>
     change({
       [id]: x._id,
@@ -102,42 +127,30 @@ export default function LocationFields({
   return (
     <View>
       <Text style={[s.h2, { marginBottom: 18 }]}>Residential location</Text>
-      <Select
-        label="State"
-        endpoint="states"
-        value={v.state}
-        required
-        disabled={disabled}
-        onSelect={(x: any) =>
-          change({
-            ...reset(children),
-            stateCode: x.code,
-            state: x.nameEnglish,
-            locationMissing: [],
-          })
-        }
-      />
+      <Input label="State" value={REGISTRATION_STATE.name} required disabled />
       <Select
         label="District"
         endpoint="districts"
-        params={{ stateCode: v.stateCode }}
+        params={{ stateCode: REGISTRATION_STATE.code }}
         value={v.district}
         required
-        disabled={disabled || !v.stateCode}
+        disabled={disabled}
         onSelect={(x: any) =>
           choose('districtId', 'district', x, children.slice(2))
         }
       />
       <Input
-        label="Area type"
+        label="Administrative type"
         type="select"
-        options={['Rural', 'Urban']}
-        value={v.settlementType || 'Rural'}
+        options={ADMINISTRATIVE_TYPES}
+        required
+        value={administrativeType}
         disabled={disabled}
         onChange={(x: string) =>
           change({
             ...reset(children.slice(5)),
-            settlementType: x,
+            localBody: x,
+            settlementType: isRuralAdministration(x) ? 'Rural' : 'Urban',
             locationMissing: (v.locationMissing || []).filter(
               (k: string) => k === 'taluk',
             ),
@@ -266,34 +279,56 @@ export default function LocationFields({
         </>
       )}
       {!rural && (
-        <Input
-          label="Town / city"
-          required
-          value={v.villageName}
-          disabled={disabled}
-          onChange={(x: string) =>
-            change({
-              villageName: x,
-              villageManual: true,
-              villageChoiceId: '',
-              villageSameAsPanchayat: false,
-              villageSameAsHabitation: false,
-            })
-          }
-        />
+        <>
+          <Select
+            label={`${administrativeType} — City / town`}
+            endpoint="location-choices"
+            params={local('village')}
+            value={v.villageManual ? 'Not listed' : v.villageName}
+            required
+            disabled={disabled || !v.districtId}
+            allowUnlisted
+            onSelect={(x: any) =>
+              change({
+                ...reset(children.slice(10)),
+                villageChoiceId: x._id || '',
+                villageName: x._id ? x.nameEnglish : '',
+                villageManual: !x._id,
+                locationMissing: (v.locationMissing || []).filter(
+                  (k: string) => k === 'taluk',
+                ),
+              })
+            }
+          />
+          {v.villageManual && (
+            <Input
+              label="City / town name"
+              required
+              maxLength={120}
+              value={v.villageName}
+              disabled={disabled || !v.districtId}
+              onChange={(x: string) =>
+                change({
+                  villageName: x,
+                  villageChoiceId: '',
+                  villageManual: true,
+                })
+              }
+            />
+          )}
+        </>
       )}
-      <Select
-        label="Ward No."
-        endpoint="location-choices"
-        params={local('ward')}
+      <Input
+        label="Ward number"
         value={v.wardNumber}
+        type="number"
+        maxLength={3}
         disabled={disabled || !v.districtId}
-        items={[{ _id: 'na', nameEnglish: 'Not applicable' }]}
-        allowUnlisted
-        onSelect={(x: any) =>
+        helpText="Optional. Enter a ward number from 1 to 999."
+        onChange={(x: string) =>
           change({
-            wardChoiceId: x._id === 'na' ? '' : x._id,
-            wardNumber: x.nameEnglish,
+            wardNumber: x.replace(/\D/g, '').slice(0, 3),
+            wardChoiceId: '',
           })
         }
       />
@@ -329,17 +364,18 @@ export default function LocationFields({
           })
         }
       />
-      <Select
-        label="Post Office"
-        endpoint="post-offices"
-        params={{ pincodeId: v.pincodeId }}
+      <Input
+        label="Post office"
+        helpText="Enter the directory name for this PIN code, or leave blank."
         value={v.postOffice}
-        disabled={disabled || !v.pincodeId}
-        onSelect={(x: any) => choose('postOfficeId', 'postOffice', x)}
+        maxLength={160}
+        disabled={disabled}
+        onChange={(x: string) => change({ postOffice: x, postOfficeId: '' })}
       />
       <Text style={s.muted}>
-        Each list follows the location selected above it. Post offices appear
-        when the PIN code is found in the directory.
+        Village lists follow your block and panchayat. City / town choices
+        follow your district. Choose “My location is not listed” to enter a
+        missing city.
       </Text>
     </View>
   );

@@ -3,7 +3,8 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { Alert, TextInput } from 'react-native';
 import Registration from '../src/Registration';
 import { api } from '../src/api';
-import { Button, Check } from '../src/ui';
+import { REGISTRATION_COMMUNITY } from '../src/registrationConfig';
+import { Button, Check, Input, Select } from '../src/ui';
 
 jest.mock('../src/api', () => ({
   ...jest.requireActual('../src/api'),
@@ -17,7 +18,7 @@ const mockApi = api as jest.Mock;
 const community = {
   _id: 'community-id',
   name: 'Example Community',
-  slug: 'example',
+  slug: REGISTRATION_COMMUNITY.slug,
 };
 const form = {
   sections: [
@@ -74,15 +75,21 @@ describe('native registration screens', () => {
   test('loads backend form and blocks incomplete required answers', async () => {
     let tree!: ReactTestRenderer;
     await act(async () => {
-      tree = create(<Registration initialSlug="example" onAdmin={() => {}} />);
+      tree = create(<Registration onAdmin={() => {}} />);
     });
     expect(mockApi).toHaveBeenCalledWith(
-      '/communities/public/example',
+      `/communities/public/${REGISTRATION_COMMUNITY.slug}`,
       {},
       'GET',
       undefined,
       expect.anything(),
     );
+    const selector = tree.root
+      .findAllByType(Input)
+      .find(x => x.props.label === 'COMMUNITY');
+    expect(selector?.props.value).toBe('Krishavaha');
+    expect(selector?.props.disabled).toBe(true);
+    expect(tree.root.findAllByType(Select)).toHaveLength(0);
     act(() => press(tree, 'Continue →'));
     expect(Alert.alert).toHaveBeenCalledWith(
       'Check your information',
@@ -96,7 +103,7 @@ describe('native registration screens', () => {
   test('reviews, requires consent, submits with existing backend scope and shows receipt', async () => {
     let tree!: ReactTestRenderer;
     await act(async () => {
-      tree = create(<Registration initialSlug="example" onAdmin={() => {}} />);
+      tree = create(<Registration onAdmin={() => {}} />);
     });
     act(() => {
       tree.root
@@ -123,7 +130,7 @@ describe('native registration screens', () => {
       phoneNumber: '9876543210',
       consent: true,
       communityId: 'community-id',
-      communitySlug: 'example',
+      communitySlug: REGISTRATION_COMMUNITY.slug,
     });
     expect(JSON.stringify(tree.toJSON())).toContain('SUBMITTED');
     expect(JSON.stringify(tree.toJSON())).toContain('Download PDF');

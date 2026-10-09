@@ -46,9 +46,20 @@ describe('registration validation and backend payload', () => {
         habitationId: 'hamlet',
       }),
     ).toBe('');
-    expect(fieldError(f, { ...v, settlementType: 'Urban' })).toBe('');
     expect(
-      fieldError(f, { ...v, settlementType: 'Urban', postalCode: '000000' }),
+      fieldError(f, {
+        ...v,
+        localBody: 'Municipality',
+        settlementType: 'Urban',
+      }),
+    ).toBe('');
+    expect(
+      fieldError(f, {
+        ...v,
+        localBody: 'Corporation',
+        settlementType: 'Urban',
+        postalCode: '000000',
+      }),
     ).not.toBe('');
   });
   test('validates all family members, ages, phones, and conditional work location', () => {
@@ -131,5 +142,60 @@ describe('registration validation and backend payload', () => {
       submission(blank(), community, [{ fields: [{ type: 'location' }] }])
         .stateCode,
     ).toBe('TN');
+  });
+});
+
+describe('administrative type submission', () => {
+  test('prevents unmatched typed post offices from being silently dropped by the API', () => {
+    expect(
+      fieldError(
+        { type: 'location' },
+        { ...blank(), postOffice: 'Example office' },
+      ),
+    ).toMatch('directory');
+    expect(
+      fieldError(
+        { type: 'location' },
+        { ...blank(), postOffice: 'Example office', postOfficeId: 'office' },
+      ),
+    ).toBe('');
+  });
+  const sections = [{ fields: [{ type: 'location' }] }];
+  const community = { _id: 'community', slug: 'krishnan-community' };
+  test.each(['Town Panchayat', 'Municipality', 'Corporation'])(
+    '%s submits the compatible Urban value and Tamil Nadu',
+    localBody => {
+      const v = {
+        ...blank(),
+        localBody,
+        stateCode: 'XX',
+        state: 'Other',
+        settlementType: 'Rural',
+        districtId: 'district',
+        villageName: 'Town',
+        postalCode: '600001',
+      };
+      const payload = submission(v, community, sections);
+      expect(payload).toMatchObject({
+        state: 'Tamil Nadu',
+        stateCode: 'TN',
+        localBody,
+        settlementType: 'Urban',
+      });
+      expect(
+        fieldError(
+          { type: 'location', required: true },
+          { ...v, stateCode: 'TN' },
+        ),
+      ).toBe('');
+    },
+  );
+  test('rejects invalid ward input and administrative type', () => {
+    expect(
+      fieldError({ type: 'location' }, { ...blank(), wardNumber: '000' }),
+    ).toMatch('ward');
+    expect(
+      fieldError({ type: 'location' }, { ...blank(), localBody: 'Invalid' }),
+    ).toMatch('administrative');
   });
 });

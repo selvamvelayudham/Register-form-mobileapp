@@ -13,8 +13,12 @@ import {
   validateSection,
   WORKING,
 } from './forms';
-import { Button, Check, ErrorBox, Input, Loading, Select, s } from './ui';
+import { Button, Check, ErrorBox, Input, Loading, s } from './ui';
 import LocationFields from './LocationFields';
+import {
+  REGISTRATION_COMMUNITY,
+  communityDisplayName,
+} from './registrationConfig';
 const memberOptions: any = {
   relationship: [
     'Self',
@@ -349,7 +353,7 @@ export function RecordDetails({ record }: any) {
       'address',
       'state',
       'district',
-      'settlementType',
+      'localBody',
       'taluk',
       'block',
       'villagePanchayat',
@@ -420,14 +424,12 @@ export function RecordDetails({ record }: any) {
   );
 }
 export default function Registration({
-  initialSlug = 'krishnan-community',
   onAdmin,
   previewForm,
   previewCommunity,
 }: any) {
-  const [slug, setSlug] = useState(previewCommunity?.slug || initialSlug),
-    [communities, setCommunities] = useState<any[]>([]),
-    [data, setData] = useState<any>(null),
+  const slug = previewCommunity?.slug || REGISTRATION_COMMUNITY.slug;
+  const [data, setData] = useState<any>(null),
     [error, setError] = useState(''),
     [loading, setLoading] = useState(true),
     [retry, setRetry] = useState(0),
@@ -438,16 +440,6 @@ export default function Registration({
     [saving, setSaving] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const preview = Boolean(previewForm);
-  useEffect(() => {
-    if (preview) return;
-    const c = new AbortController();
-    api('/communities/public', {}, 'GET', undefined, c.signal)
-      .then(setCommunities)
-      .catch(err => {
-        if (!c.signal.aborted) setError(err.message);
-      });
-    return () => c.abort();
-  }, [retry, preview]);
   useEffect(() => {
     if (preview) {
       setData({ community: previewCommunity, form: previewForm });
@@ -465,7 +457,15 @@ export default function Registration({
       undefined,
       c.signal,
     )
-      .then(setData)
+      .then(result =>
+        setData({
+          ...result,
+          community: {
+            ...result.community,
+            name: communityDisplayName(result.community),
+          },
+        }),
+      )
       .catch(err => {
         if (!c.signal.aborted) setError(err.message);
       })
@@ -544,25 +544,6 @@ export default function Registration({
       setSaving(false);
     }
   };
-  const switchCommunity = (x: any) => {
-    const run = () => {
-      setSlug(x.slug);
-      setValues(blank());
-      setStep(0);
-      setReceipt(null);
-    };
-    if (x.slug === slug) return;
-    if (JSON.stringify(values) !== JSON.stringify(blank()))
-      Alert.alert(
-        'Change community?',
-        'This clears the family information entered in this form.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Change community', onPress: run },
-        ],
-      );
-    else run();
-  };
   return (
     <View style={s.screen}>
       {!preview && (
@@ -582,15 +563,10 @@ export default function Registration({
         contentContainerStyle={s.body}
       >
         {!preview && (
-          <Select
+          <Input
             label="COMMUNITY"
-            value={
-              data?.community?.name ||
-              communities.find(x => x.slug === slug)?.name
-            }
-            items={communities}
-            onSelect={switchCommunity}
-            disabled={busy}
+            value={REGISTRATION_COMMUNITY.name}
+            disabled
           />
         )}
         {loading ? (
@@ -674,7 +650,17 @@ export default function Registration({
                         fieldsOf(section).some(
                           (x: any) => x.type === 'location',
                         ) &&
-                        ['villageName', 'taluk', 'wardNumber'].includes(f.key)
+                        [
+                          'villageName',
+                          'taluk',
+                          'wardNumber',
+                          'postalCode',
+                          'postOffice',
+                          'state',
+                          'stateCode',
+                          'settlementType',
+                          'localBody',
+                        ].includes(f.key)
                       ),
                   )
                   .map((f: any) => (
@@ -710,6 +696,7 @@ export default function Registration({
                                     [
                                       'state',
                                       'district',
+                                      'localBody',
                                       'taluk',
                                       'block',
                                       'villagePanchayat',

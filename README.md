@@ -18,7 +18,7 @@ npm run android
 
 In Android Studio, open **SangamMobile/android**. Install Node.js 22 LTS, JDK 17 and the SDK components listed in [the app setup guide](SangamMobile/README.md).
 
-If you already have this repository locally, first run `git pull --ff-only` from the repository folder. Then restart Metro from `SangamMobile` with `npm start -- --reset-cache`, and rerun `npm run android` in another terminal. Install `npm ci` if your dependencies have not been installed.
+If you already have this repository locally, first run `git pull --ff-only` from the repository folder. Then restart Metro from `SangamMobile` with `npm start -- --reset-cache`, and rerun `npm run android` in another terminal. Run `npm ci` if your dependencies have not been installed.
 
 ## Android APK builds
 
@@ -27,3 +27,7 @@ The [Android APK workflow](.github/workflows/android-apk.yml) runs on pushes to 
 ## Render error checks
 
 The loose whitespace strings that caused `Text strings must be rendered within a <Text> component` have been removed from the dropdown footer, reports and form editor. Lint now rejects raw text outside React Native Text components, with a regression test covering whitespace and the app screens.
+
+## Locked registration and administrative location UI
+
+Public registration is locked to **Krishavaha** and **Tamil Nadu**. PIN, ward and post office use text inputs; administrative type controls village/town entry and resets dependent locations. See the [app guide](SangamMobile/README.md#registration-changes--9-october-2026) for the API compatibility rules and outstanding backend requirements.

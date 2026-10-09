@@ -1,3 +1,8 @@
+import {
+  ADMINISTRATIVE_TYPES,
+  REGISTRATION_STATE,
+  isRuralAdministration,
+} from './registrationConfig';
 export const WORKING = [
   'Government employee',
   'Private employee',
@@ -29,8 +34,9 @@ export const CONTRIBUTIONS = [
   'Other',
 ];
 export const blank = () => ({
-  state: 'Tamil Nadu',
-  stateCode: 'TN',
+  state: REGISTRATION_STATE.name,
+  stateCode: REGISTRATION_STATE.code,
+  localBody: 'Village Panchayat',
   settlementType: 'Rural',
   members: [{ name: '', relationship: 'Self', age: '' }],
   support: { needed: false, categories: [], priority: 'Routine', details: '' },
@@ -50,6 +56,12 @@ export const validPhone = (v: any) =>
 export function fieldError(f: any, v: any): string {
   const value = v[f.key];
   if (f.type === 'location') {
+    if (v.postOffice?.trim() && !v.postOfficeId)
+      return 'Enter a post office name matching the directory for this PIN code, wait for it to be checked, or leave it blank.';
+    if (v.localBody && !ADMINISTRATIVE_TYPES.includes(v.localBody))
+      return 'Select a valid administrative type.';
+    if (v.wardNumber && !/^[1-9]\d{0,2}$/.test(v.wardNumber))
+      return 'Enter a ward number from 1 to 999, or leave it blank.';
     if (
       f.required &&
       !(
@@ -57,11 +69,13 @@ export function fieldError(f: any, v: any): string {
         v.districtId &&
         v.villageName &&
         /^[1-9]\d{5}$/.test(v.postalCode || '') &&
-        (v.settlementType === 'Urban' ||
+        ((v.localBody
+          ? !isRuralAdministration(v.localBody)
+          : v.settlementType === 'Urban') ||
           (v.blockId && v.villagePanchayatId && v.habitationId))
       )
     )
-      return 'Complete your district, village / town, rural location and 6-digit PIN code.';
+      return 'Complete your district, city / village, required location lists and 6-digit PIN code.';
     return '';
   }
   if (f.key === 'members' || f.type === 'members') {
@@ -131,8 +145,22 @@ export function validateSection(section: any, values: any) {
   return '';
 }
 export function submission(values: any, community: any, sections: any[]) {
+  const hasLocation = sections.some(s =>
+    fieldsOf(s).some((f: any) => f.type === 'location'),
+  );
   const result = {
     ...values,
+    ...(hasLocation
+      ? {
+          state: REGISTRATION_STATE.name,
+          stateCode: REGISTRATION_STATE.code,
+          settlementType: isRuralAdministration(
+            values.localBody || 'Village Panchayat',
+          )
+            ? 'Rural'
+            : 'Urban',
+        }
+      : {}),
     communitySlug: community.slug,
     communityId: community._id,
   };
@@ -142,6 +170,7 @@ export function submission(values: any, community: any, sections: any[]) {
     delete result.state;
     delete result.stateCode;
     delete result.settlementType;
+    delete result.localBody;
   }
   return result;
 }

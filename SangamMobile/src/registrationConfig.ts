@@ -1,7 +1,7 @@
 // Change these settings when preparing an app for another community.
 export const REGISTRATION_COMMUNITY = {
   slug: 'krishnan-community',
-  name: 'Krishavaha',
+  name: 'Krishnavaha',
 };
 export const REGISTRATION_STATE = { code: 'TN', name: 'Tamil Nadu' };
 export const ADMINISTRATIVE_TYPES = [

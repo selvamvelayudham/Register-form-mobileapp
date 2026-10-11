@@ -5,7 +5,7 @@ Native React Native CLI app. **No Expo and no WebView.** Connects directly to th
 ## Screens and behaviour
 
 - Sangam registration branding, colours, section navigation and review adapted from the existing React frontend.
-- Locked Krishavaha registration (existing `krishnan-community` ID) and live published forms, including custom questions, required fields, hidden sections, dropdowns and multiple-choice benefits.
+- Locked Krishnavaha registration (existing `krishnan-community` ID) and live published forms, including custom questions, required fields, hidden sections, dropdowns and multiple-choice benefits.
 - Parent-filtered state → district → taluk/block → panchayat → village/habitation lists, rural and urban entry, wards, streets, PIN lookup and post offices. Search and pagination use the backend master directory.
 - Family members (up to 100), conditional work locations, household information, support requests, contributions and consent.
 - Submission through the existing `/families` endpoint and PDF receipt download through Android’s Save As picker. Receipt authentication uses the backend’s 24-hour receipt token.
@@ -13,7 +13,7 @@ Native React Native CLI app. **No Expo and no WebView.** Connects directly to th
 - District/community report filters, totals, pagination and summary/family/member CSV export.
 - Community administrator form editor: section and question editing, draft saving, native preview and publishing. Form editor actions respect backend permissions. Managers have read access because the existing backend does not grant them `forms:write`.
 
-Form answers remain in memory until submission. Public registration is locked to Krishavaha; admin form previews may still preview other communities. Admin data and credentials are not bundled in the APK. The API remains the authority for access control and validation.
+After member sign-in, form answers and the current section are saved in encrypted, account-scoped storage on the phone. See [AUTH_SETUP.md](AUTH_SETUP.md) to activate email/password and Google sign-in before building. Member registration is locked to Krishnavaha; admin form previews may still preview other communities. Admin data and credentials are not bundled in the APK. The API remains the authority for access control and validation.
 
 ## Run on your Windows computer
 
@@ -86,7 +86,7 @@ The Android scaffold is based on the MIT-licensed React Native Community templat
 
 ## Current registration UI
 
-Public registration displays **Krishavaha**, using the existing `krishnan-community` ID/slug. Tamil Nadu is fixed and disabled. Settings for another community build are in `src/registrationConfig.ts`.
+Member registration displays **Krishnavaha**, using the existing `krishnan-community` ID/slug. Tamil Nadu is fixed and disabled. Settings for another community build are in `src/registrationConfig.ts`.
 
 **Pidagai** is a text input immediately after residential address. It is included in review and submission under `pitagaiName`. Until the backend publishes that dedicated field, the app also preserves it as a `Pidagai:` line in the accepted address field, so it remains in stored records and PDF receipts. If the published form includes `pitagaiName`, the address fallback is omitted.
 

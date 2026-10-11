@@ -46,7 +46,17 @@ export const blank = () => ({
 });
 export const fieldsOf = (section: any) =>
   (section?.fields || [])
-    .filter((f: any) => f.visible !== false)
+    .filter(
+      (f: any) =>
+        f.visible !== false &&
+        ![
+          'taluk',
+          'talukCode',
+          'talukChoiceId',
+          'streetArea',
+          'streetChoiceId',
+        ].includes(f.key),
+    )
     .sort((a: any, b: any) => a.order - b.order);
 export const sectionsOf = (form: any) =>
   (form?.sections || [])
@@ -175,6 +185,17 @@ export function submission(values: any, community: any, sections: any[]) {
     communitySlug: community.slug,
     communityId: community._id,
   };
+  for (const key of [
+    'taluk',
+    'talukCode',
+    'talukChoiceId',
+    'streetArea',
+    'streetChoiceId',
+  ])
+    delete result[key];
+  result.locationMissing = (result.locationMissing || []).filter(
+    (key: string) => !['taluk', 'street'].includes(key),
+  );
   delete result.postOffice;
   delete result.postOfficeId;
   delete result.postOfficeSourceKey;

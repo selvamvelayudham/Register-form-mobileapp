@@ -1,3 +1,9 @@
+## Member login update
+
+Mandatory member registration/login, email/password and native Google sign-in, account-scoped encrypted draft recovery, and cleaner aligned screens have been added. Taluk and street/area inputs are removed and the community name is corrected to **Krishnavaha**.
+
+**Authentication requires Firebase setup before use.** See [AUTH_SETUP.md](SangamMobile/AUTH_SETUP.md) for provider configuration, signing fingerprints and the two GitHub Actions settings. Saved progress currently resumes on the same phone.
+
 # Sangam Registration mobile app
 
 React Native Android app without Expo. Uses the existing API at https://shreeswayam.tech/api.
@@ -30,6 +36,6 @@ The loose whitespace strings that caused `Text strings must be rendered within a
 
 ## Locked registration and administrative location UI
 
-Public registration is locked to **Krishavaha** and **Tamil Nadu**. PIN and ward use text inputs; Pidagai follows the address; post office and separate habitation controls are removed; administrative type controls village/town entry and resets dependent locations. See the [app guide](SangamMobile/README.md#current-registration-ui) for the API compatibility rules and outstanding backend requirements.
+Member registration is locked to **Krishnavaha** and **Tamil Nadu**. PIN and ward use text inputs; Pidagai follows the address; post office and separate habitation controls are removed; administrative type controls village/town entry and resets dependent locations. See the [app guide](SangamMobile/README.md#current-registration-ui) for the API compatibility rules and outstanding backend requirements.
 
 Urban dropdowns now use bundled LGD records filtered by district and type. See [directory provenance](SangamMobile/src/data/README.md).

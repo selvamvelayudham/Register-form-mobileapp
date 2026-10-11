@@ -56,6 +56,8 @@ describe('residential location changes', () => {
       villageChoiceId: '',
     });
     expect(select(tree, 'Habitation / Hamlet')).toBeUndefined();
+    expect(select(tree, 'Taluk / Tehsil / Mandal')).toBeUndefined();
+    expect(select(tree, 'Street / Area')).toBeUndefined();
     act(() => tree.unmount());
   });
   test('locks Tamil Nadu, removes area type, and accepts ward, PIN as text inputs and removes post office and habitation', () => {
@@ -83,6 +85,8 @@ describe('residential location changes', () => {
     expect(input(tree, 'PIN code').props.value).toBe('600001');
     expect(input(tree, 'Post office')).toBeUndefined();
     expect(select(tree, 'Habitation / Hamlet')).toBeUndefined();
+    expect(select(tree, 'Taluk / Tehsil / Mandal')).toBeUndefined();
+    expect(select(tree, 'Street / Area')).toBeUndefined();
     act(() => tree.unmount());
   });
 

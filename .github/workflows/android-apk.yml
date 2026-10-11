@@ -8,6 +8,9 @@ permissions:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    env:
+      FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+      GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
     defaults:
       run:
         working-directory: SangamMobile

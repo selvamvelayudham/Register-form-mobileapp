@@ -1,5 +1,14 @@
 package tech.shreeswayam.sangam
 
+import android.content.MutableContextWrapper
+import androidx.credentials.CredentialManager
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.CustomCredential
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import kotlinx.coroutines.*
 import android.app.Activity
 import android.content.Intent
 import android.security.keystore.KeyGenParameterSpec
@@ -18,6 +27,9 @@ import javax.crypto.spec.GCMParameterSpec
 
 /** Android document picker and encrypted admin session. No storage permissions required. */
 class SangamDevice(private val context: ReactApplicationContext) : ReactContextBaseJavaModule(context), ActivityEventListener {
+  private val authScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+  private var googleBusy = false
+  override fun getConstants(): Map<String, Any> = mapOf("firebaseApiKey" to BuildConfig.FIREBASE_API_KEY)
   private val executor = Executors.newSingleThreadExecutor()
   private var pending: Promise? = null
   private var downloadUrl = ""
@@ -51,6 +63,63 @@ class SangamDevice(private val context: ReactApplicationContext) : ReactContextB
     } catch (e: Exception) { context.getSharedPreferences("sangam", 0).edit().remove("session").apply(); promise.resolve(null) }
   }
   @ReactMethod fun clearSession(promise: Promise) { context.getSharedPreferences("sangam", 0).edit().remove("session").apply(); promise.resolve(null) }
+  // Account tokens and drafts use the same Keystore encryption with separate keys.
+  private fun secureName(name: String): String {
+    require(name.length <= 256 && name.matches(Regex("[A-Za-z0-9:_-]+")))
+    return "secure.$name"
+  }
+  @ReactMethod fun saveSecure(name: String, value: String, promise: Promise) {
+    try {
+      val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
+      val encrypted = Base64.encodeToString(cipher.iv, Base64.NO_WRAP) + ":" + Base64.encodeToString(cipher.doFinal(value.toByteArray(Charsets.UTF_8)), Base64.NO_WRAP)
+      if (!context.getSharedPreferences("sangam", 0).edit().putString(secureName(name), encrypted).commit()) throw Exception("Storage unavailable")
+      promise.resolve(null)
+    } catch (e: Exception) { promise.reject("STORAGE", "Could not save your progress securely", e) }
+  }
+  @ReactMethod fun readSecure(name: String, promise: Promise) {
+    try {
+      val saved = context.getSharedPreferences("sangam", 0).getString(secureName(name), null)
+      if (saved == null) { promise.resolve(null); return }
+      val parts = saved.split(":")
+      val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, Base64.decode(parts[0], Base64.NO_WRAP))) }
+      promise.resolve(String(cipher.doFinal(Base64.decode(parts[1], Base64.NO_WRAP)), Charsets.UTF_8))
+    } catch (e: Exception) { promise.reject("STORAGE", "Could not restore your saved progress", e) }
+  }
+  @ReactMethod fun clearSecure(name: String, promise: Promise) {
+    try {
+      if (!context.getSharedPreferences("sangam", 0).edit().remove(secureName(name)).commit()) throw Exception("Storage unavailable")
+      promise.resolve(null)
+    } catch (e: Exception) { promise.reject("STORAGE", "Could not clear the saved session", e) }
+  }
+  @ReactMethod fun googleSignIn(promise: Promise) {
+    val activity = context.currentActivity ?: run { promise.reject("ACTIVITY", "Open the app to sign in"); return }
+    if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) { promise.reject("CONFIG", "Google sign-in is temporarily unavailable. Please contact your community team."); return }
+    if (googleBusy) { promise.reject("BUSY", "A sign-in is already in progress"); return }
+    googleBusy = true
+    authScope.launch {
+      try {
+        val option = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).build()
+        val result = CredentialManager.create(context).getCredential(MutableContextWrapper(activity), GetCredentialRequest.Builder().addCredentialOption(option).build())
+        val credential = result.credential
+        if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) throw Exception("Unexpected credential")
+        promise.resolve(GoogleIdTokenCredential.createFrom(credential.data).idToken)
+      } catch (e: GetCredentialCancellationException) { promise.reject("GOOGLE_CANCELLED", "Sign-in cancelled") }
+      catch (e: Exception) { promise.reject("GOOGLE", "Google sign-in failed. Please check your connection and try again.", e) }
+      finally { googleBusy = false }
+    }
+  }
+  @ReactMethod fun googleSignOut(promise: Promise) {
+    authScope.launch {
+      try { CredentialManager.create(context).clearCredentialState(ClearCredentialStateRequest()); promise.resolve(null) }
+      catch (e: Exception) { promise.reject("GOOGLE", "Could not clear Google sign-in", e) }
+    }
+  }
+  override fun invalidate() {
+    authScope.cancel()
+    executor.shutdown()
+    context.removeActivityEventListener(this)
+    super.invalidate()
+  }
   @ReactMethod fun saveDownload(url: String, filename: String, headers: ReadableMap, promise: Promise) {
     val uri = android.net.Uri.parse(url)
     if (uri.scheme != "https" || uri.host != "shreeswayam.tech" || !(uri.path ?: "").startsWith("/api/")) { promise.reject("URL", "Invalid download address"); return }

@@ -3,6 +3,14 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { Alert, TextInput } from 'react-native';
 import Registration from '../src/Registration';
 import { api } from '../src/api';
+import { drafts } from '../src/drafts';
+jest.mock('../src/drafts', () => ({
+  ...jest.requireActual('../src/drafts'),
+  drafts: {
+    read: jest.fn().mockResolvedValue(null),
+    save: jest.fn().mockResolvedValue(null),
+  },
+}));
 import { REGISTRATION_COMMUNITY } from '../src/registrationConfig';
 import { Button, Check, Input, Select } from '../src/ui';
 
@@ -61,6 +69,8 @@ function press(tree: ReactTestRenderer, title: string) {
 describe('native registration screens', () => {
   beforeEach(() => {
     mockApi.mockReset();
+    (drafts.read as jest.Mock).mockReset().mockResolvedValue(null);
+    (drafts.save as jest.Mock).mockClear();
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     mockApi.mockImplementation(async (path: string) =>
       path === '/communities/public'
@@ -93,7 +103,7 @@ describe('native registration screens', () => {
     const selector = tree.root
       .findAllByType(Input)
       .find(x => x.props.label === 'COMMUNITY');
-    expect(selector?.props.value).toBe('Krishavaha');
+    expect(selector?.props.value).toBe('Krishnavaha');
     expect(selector?.props.disabled).toBe(true);
     const inputs = tree.root.findAllByType(Input).map(x => x.props.label);
     expect(inputs.indexOf('Pidagai')).toBe(
@@ -107,6 +117,50 @@ describe('native registration screens', () => {
     );
     expect(mockApi.mock.calls.some(([path]) => path === '/families')).toBe(
       false,
+    );
+    act(() => tree.unmount());
+  });
+  test('a returning member restores their section and answers before editing', async () => {
+    (drafts.read as jest.Mock).mockResolvedValue({
+      version: 1,
+      step: 1,
+      values: {
+        familyHeadName: 'Returning member',
+        phoneNumber: '9876543210',
+        consent: true,
+      },
+    });
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(
+        <Registration
+          member={{ uid: 'member-1', email: 'person@gmail.com' }}
+          onAdmin={() => {}}
+          onLogout={() => {}}
+        />,
+      );
+    });
+    expect(drafts.read).toHaveBeenCalledWith(
+      'member-1',
+      REGISTRATION_COMMUNITY.slug,
+    );
+    expect(JSON.stringify(tree.toJSON())).toContain('Review & submit');
+    expect(JSON.stringify(tree.toJSON())).toContain('Returning member');
+    expect(tree.root.findAllByType(Check)[0].props.value).toBe(false);
+    act(() => press(tree, 'Edit'));
+    expect(
+      tree.root
+        .findAllByType(TextInput)
+        .find(x => x.props.accessibilityLabel === 'Family head')!.props.value,
+    ).toBe('Returning member');
+    await act(async () => {});
+    expect(drafts.save).toHaveBeenLastCalledWith(
+      'member-1',
+      REGISTRATION_COMMUNITY.slug,
+      expect.objectContaining({ familyHeadName: 'Returning member' }),
+      0,
+      null,
+      0,
     );
     act(() => tree.unmount());
   });

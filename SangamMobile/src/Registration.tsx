@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { api, download } from './api';
+import { drafts, restoreDraft } from './drafts';
 import {
   blank,
   CONTRIBUTIONS,
@@ -367,13 +368,11 @@ export function RecordDetails({ record }: any) {
       'state',
       'district',
       'localBody',
-      'taluk',
       'block',
       'villagePanchayat',
       'villagePanchayatNameTamil',
       'villageName',
       'wardNumber',
-      'streetArea',
       'postalCode',
     ],
     'Household information': [
@@ -438,6 +437,8 @@ export default function Registration({
   onAdmin,
   previewForm,
   previewCommunity,
+  member,
+  onLogout,
 }: any) {
   const slug = previewCommunity?.slug || REGISTRATION_COMMUNITY.slug;
   const [data, setData] = useState<any>(null),
@@ -449,6 +450,11 @@ export default function Registration({
     [busy, setBusy] = useState(false),
     [receipt, setReceipt] = useState<any>(null),
     [saving, setSaving] = useState(false);
+  const [draftReady, setDraftReady] = useState(!member);
+  const [draftError, setDraftError] = useState('');
+  const [draftStatus, setDraftStatus] = useState('');
+  const [draftRetry, setDraftRetry] = useState(0);
+  const receiptExpiry = useRef(0);
   const scroll = useRef<ScrollView>(null);
   const preview = Boolean(previewForm);
   useEffect(() => {
@@ -487,6 +493,58 @@ export default function Registration({
   }, [slug, retry, preview, previewForm, previewCommunity]);
   const sections = sectionsOf(data?.form),
     section = sections[step];
+  useEffect(() => {
+    if (!member || preview || !data) return;
+    let alive = true;
+    drafts
+      .read(member.uid, slug)
+      .then(saved => {
+        if (!alive) return;
+        const restored = restoreDraft(saved, sectionsOf(data.form).length);
+        if (restored) {
+          setValues(restored.values);
+          setStep(restored.step);
+          setReceipt(restored.receipt);
+          receiptExpiry.current = restored.receiptExpiresAt || 0;
+        }
+        setDraftReady(true);
+      })
+      .catch(err => {
+        if (alive) setDraftError(err.message);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [member, slug, preview, data]);
+  useEffect(() => {
+    if (!member || preview || !draftReady || !data) return;
+    let alive = true;
+    setDraftStatus('Saving progress…');
+    drafts
+      .save(member.uid, slug, values, step, receipt, receiptExpiry.current)
+      .then(() => {
+        if (alive) setDraftStatus('Progress saved on this phone');
+      })
+      .catch(() => {
+        if (alive)
+          setDraftStatus(
+            'Could not save progress. Keep the app open and try again.',
+          );
+      });
+    return () => {
+      alive = false;
+    };
+  }, [
+    member,
+    slug,
+    preview,
+    draftReady,
+    data,
+    values,
+    step,
+    receipt,
+    draftRetry,
+  ]);
   const change = useCallback(
     (patch: any) => setValues((old: any) => ({ ...old, ...patch })),
     [],
@@ -533,6 +591,24 @@ export default function Registration({
         'POST',
         submission(values, data.community, sections),
       );
+      receiptExpiry.current = Date.now() + 24 * 60 * 60 * 1000;
+      if (member) {
+        try {
+          await drafts.save(
+            member.uid,
+            slug,
+            {},
+            0,
+            saved,
+            receiptExpiry.current,
+          );
+        } catch {
+          Alert.alert(
+            'Record submitted',
+            'Your record was received, but its receipt could not be saved on this phone. Download your PDF now.',
+          );
+        }
+      }
       setReceipt(saved);
       scroll.current?.scrollTo({ y: 0, animated: true });
     } catch (err: any) {
@@ -573,6 +649,27 @@ export default function Registration({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={s.body}
       >
+        {member && !preview && (
+          <View style={s.card}>
+            <Text style={s.label}>{member.email}</Text>
+            <Text accessibilityLiveRegion="polite" style={s.muted}>
+              {draftStatus || 'Restoring your progress…'}
+            </Text>
+            {draftStatus.startsWith('Could not') && (
+              <Button
+                title="Retry saving progress"
+                secondary
+                onPress={() => setDraftRetry(r => r + 1)}
+              />
+            )}
+            <Button
+              title="Sign out"
+              secondary
+              disabled={busy}
+              onPress={onLogout}
+            />
+          </View>
+        )}
         {!preview && (
           <Input
             label="COMMUNITY"
@@ -580,7 +677,15 @@ export default function Registration({
             disabled
           />
         )}
-        {loading ? (
+        {draftError ? (
+          <ErrorBox
+            error={draftError}
+            retry={() => {
+              setDraftError('');
+              setRetry(r => r + 1);
+            }}
+          />
+        ) : loading || (member && data && !draftReady) ? (
           <Loading label="Retrieving your community form…" />
         ) : error || !sections.length ? (
           <ErrorBox
@@ -672,7 +777,6 @@ export default function Registration({
                         ) &&
                         [
                           'villageName',
-                          'taluk',
                           'wardNumber',
                           'postalCode',
                           'state',
@@ -721,12 +825,10 @@ export default function Registration({
                                         'state',
                                         'district',
                                         'localBody',
-                                        'taluk',
                                         'block',
                                         'villagePanchayat',
                                         'villageName',
                                         'wardNumber',
-                                        'streetArea',
                                         'postalCode',
                                       ].map(k => [k, values[k]]),
                                     ),

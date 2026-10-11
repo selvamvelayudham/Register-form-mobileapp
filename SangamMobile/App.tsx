@@ -13,7 +13,7 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { api, sessionStore } from './src/api';
 import { Button, Input, Loading, s } from './src/ui';
-import Registration from './src/Registration';
+import MemberGate from './src/MemberGate';
 import Admin from './src/Admin';
 export default function App() {
   const [screen, setScreen] = useState('register'),
@@ -129,7 +129,7 @@ export default function App() {
           {restoring ? (
             <Loading label="Preparing Sangam…" />
           ) : screen === 'register' ? (
-            <Registration
+            <MemberGate
               onAdmin={() => setScreen(session ? 'admin' : 'login')}
             />
           ) : screen === 'admin' && session ? (

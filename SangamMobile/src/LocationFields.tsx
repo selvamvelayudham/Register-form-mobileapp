@@ -53,18 +53,9 @@ const reset = (keys: string[]) =>
 export default function LocationFields({
   values: v,
   change,
-  slug,
   disabled,
 }: any) {
   const pin = v.postalCode || '';
-  const local = (kind: string) => ({
-    kind,
-    communitySlug: slug,
-    districtId: v.districtId,
-    blockId: kind === 'taluk' ? undefined : v.blockId,
-    villagePanchayatId: kind === 'taluk' ? undefined : v.villagePanchayatId,
-    habitationId: kind === 'street' ? v.habitationId : undefined,
-  });
   const administrativeType = v.localBody || 'Village Panchayat';
   const rural = isRuralAdministration(administrativeType);
   const choose = (id: string, key: string, x: any, clear: string[] = []) =>
@@ -74,16 +65,10 @@ export default function LocationFields({
       ...reset(clear),
       ...(clear.length
         ? {
-            locationMissing: (v.locationMissing || []).filter(
-              (k: string) => k === 'taluk' && !clear.includes('taluk'),
-            ),
+            locationMissing: [],
           }
         : {}),
     });
-  const missing = (kind: string, x: any) =>
-    (v.locationMissing || [])
-      .filter((k: string) => k !== kind)
-      .concat(x._id ? [] : [kind]);
   return (
     <View>
       <Text style={[s.h2, { marginBottom: 18 }]}>Residential location</Text>
@@ -111,25 +96,7 @@ export default function LocationFields({
             ...reset(children.slice(5)),
             localBody: x,
             settlementType: isRuralAdministration(x) ? 'Rural' : 'Urban',
-            locationMissing: (v.locationMissing || []).filter(
-              (k: string) => k === 'taluk',
-            ),
-          })
-        }
-      />
-      <Select
-        label="Taluk / Tehsil / Mandal"
-        endpoint="location-choices"
-        params={local('taluk')}
-        value={v.taluk}
-        disabled={disabled || !v.districtId}
-        allowUnlisted
-        onSelect={(x: any) =>
-          change({
-            talukChoiceId: x.talukCode ? '' : x._id,
-            talukCode: x.talukCode || '',
-            taluk: x.nameEnglish,
-            locationMissing: missing('taluk', x),
+            locationMissing: [],
           })
         }
       />
@@ -159,9 +126,7 @@ export default function LocationFields({
                 villagePanchayatId: x._id,
                 villagePanchayat: x.nameEnglish,
                 villagePanchayatNameTamil: x.nameEnglish,
-                locationMissing: (v.locationMissing || []).filter(
-                  (k: string) => k === 'taluk',
-                ),
+                locationMissing: [],
               })
             }
           />
@@ -179,9 +144,7 @@ export default function LocationFields({
                 habitationId: x._id,
                 habitation: x.nameEnglish,
                 villageSameAsHabitation: true,
-                locationMissing: (v.locationMissing || []).filter(
-                  (k: string) => k === 'taluk',
-                ),
+                locationMissing: [],
               })
             }
           />
@@ -204,9 +167,7 @@ export default function LocationFields({
                 villageName: x._id ? x.nameEnglish : '',
                 villageManual: true,
                 urbanManualEntry: !x._id,
-                locationMissing: (v.locationMissing || []).filter(
-                  (k: string) => k === 'taluk',
-                ),
+                locationMissing: [],
               })
             }
           />
@@ -239,21 +200,6 @@ export default function LocationFields({
           change({
             wardNumber: x.replace(/\D/g, '').slice(0, 3),
             wardChoiceId: '',
-          })
-        }
-      />
-      <Select
-        label="Street / Area"
-        endpoint="location-choices"
-        params={local('street')}
-        value={v.streetArea}
-        disabled={disabled || !v.villageName}
-        allowUnlisted
-        onSelect={(x: any) =>
-          change({
-            streetChoiceId: x._id,
-            streetArea: x.nameEnglish,
-            locationMissing: missing('street', x),
           })
         }
       />

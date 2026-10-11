@@ -72,7 +72,10 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def authSetting = { name -> groovy.json.JsonOutput.toJson(System.getenv(name) ?: project.findProperty(name) ?: "") }
+
 android {
+    buildFeatures { buildConfig true }
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
@@ -82,8 +85,10 @@ android {
         applicationId "tech.shreeswayam.sangam"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        buildConfigField "String", "FIREBASE_API_KEY", authSetting("FIREBASE_API_KEY")
+        buildConfigField "String", "GOOGLE_WEB_CLIENT_ID", authSetting("GOOGLE_WEB_CLIENT_ID")
+        versionCode 2
+        versionName "1.1"
     }
     signingConfigs {
         debug {
@@ -108,6 +113,9 @@ android {
 }
 
 dependencies {
+    implementation("androidx.credentials:credentials:1.5.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.5.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 

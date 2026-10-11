@@ -8,6 +8,7 @@ jest.mock('../src/memberAuth', () => ({
   ...jest.requireActual('../src/memberAuth'),
   emailSignIn: jest.fn(),
   googleSignIn: jest.fn(),
+  memberSessionKey: jest.fn(() => 'cloud-member:test-cloud-project'),
   memberStore: {
     read: jest.fn().mockResolvedValue(null),
     save: jest.fn().mockResolvedValue(null),
@@ -27,6 +28,10 @@ test('requires authentication and offers email registration, login and Google', 
   await act(async () => {
     tree = create(<MemberGate onAdmin={() => {}} />);
   });
+  expect(auth.memberStore.clear).toHaveBeenCalledWith('member');
+  expect(auth.memberStore.read).toHaveBeenCalledWith(
+    'cloud-member:test-cloud-project',
+  );
   expect(JSON.stringify(tree.toJSON())).toContain('Welcome back');
   expect(JSON.stringify(tree.toJSON())).toContain('Sign in with Google');
   act(() => press(tree, 'Register'));

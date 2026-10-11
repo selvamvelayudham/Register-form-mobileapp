@@ -29,7 +29,7 @@ import javax.crypto.spec.GCMParameterSpec
 class SangamDevice(private val context: ReactApplicationContext) : ReactContextBaseJavaModule(context), ActivityEventListener {
   private val authScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
   private var googleBusy = false
-  override fun getConstants(): Map<String, Any> = mapOf("firebaseApiKey" to BuildConfig.FIREBASE_API_KEY)
+  override fun getConstants(): Map<String, Any> = mapOf("googleCloudApiKey" to BuildConfig.GOOGLE_CLOUD_API_KEY, "googleCloudProjectId" to BuildConfig.GOOGLE_CLOUD_PROJECT_ID)
   private val executor = Executors.newSingleThreadExecutor()
   private var pending: Promise? = null
   private var downloadUrl = ""

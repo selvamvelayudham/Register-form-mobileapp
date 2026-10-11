@@ -1,6 +1,7 @@
 import { NativeModules } from 'react-native';
 
 export type MemberSession = {
+  projectId: string;
   uid: string;
   email: string;
   token: string;
@@ -9,19 +10,28 @@ export type MemberSession = {
 };
 const device = () => NativeModules.SangamDevice;
 const config = () => {
-  const key = device()?.firebaseApiKey;
-  if (!key)
+  const apiKey = device()?.googleCloudApiKey;
+  const projectId = device()?.googleCloudProjectId;
+  if (
+    !apiKey ||
+    !projectId ||
+    !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId)
+  )
     throw new Error(
       'Account sign-in is temporarily unavailable. Please contact your community team.',
     );
-  return key as string;
+  return { apiKey: apiKey as string, projectId: projectId as string };
 };
+export const memberSessionKey = () => `cloud-member:${config().projectId}`;
 const messages: Record<string, string> = {
   EMAIL_EXISTS: 'This email already has an account. Please log in.',
   INVALID_LOGIN_CREDENTIALS: 'Check your email and password and try again.',
   EMAIL_NOT_FOUND: 'Check your email and password and try again.',
   INVALID_PASSWORD: 'Check your email and password and try again.',
   USER_DISABLED: 'This account is disabled. Contact your community team.',
+  TOKEN_EXPIRED: 'Your session expired. Please log in again.',
+  INVALID_REFRESH_TOKEN: 'Please log in again.',
+  PROJECT_NUMBER_MISMATCH: 'Please log in again.',
   TOO_MANY_ATTEMPTS_TRY_LATER: 'Too many attempts. Please try again later.',
   WEAK_PASSWORD: 'Use at least 8 characters for your password.',
   INVALID_EMAIL: 'Enter a valid email address.',
@@ -77,14 +87,20 @@ async function request(url: string, body: any, form = false) {
 const accounts = (action: string, body: any) =>
   request(
     `https://identitytoolkit.googleapis.com/v1/accounts:${action}?key=${encodeURIComponent(
-      config(),
+      config().apiKey,
     )}`,
     body,
   );
 function session(result: any): MemberSession {
+  if (result.needConfirmation)
+    throw new AuthError(
+      'ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL',
+      messages.ACCOUNT_EXISTS_WITH_DIFFERENT_CREDENTIAL,
+    );
   if (!result.localId || !result.idToken || !result.refreshToken)
     throw new Error('Sign-in did not complete. Please try again.');
   return {
+    projectId: config().projectId,
     uid: result.localId,
     email: result.email || '',
     token: result.idToken,
@@ -123,7 +139,7 @@ export async function emailSignIn(
 export async function googleSignIn() {
   config();
   const idToken = await device().googleSignIn();
-  // Firebase verifies Google's token before issuing a member session.
+  // Google Cloud Identity Platform verifies Google's token before issuing a session.
   return session(
     await accounts('signInWithIdp', {
       postBody: `id_token=${encodeURIComponent(idToken)}&providerId=google.com`,
@@ -148,9 +164,11 @@ export async function resetPassword(email: string) {
 }
 export async function restoreMember(saved: MemberSession) {
   if (!saved?.uid || !saved.refreshToken) return null;
+  if (saved.projectId !== config().projectId)
+    throw new AuthError('PROJECT_CHANGED', 'Please log in again.');
   const refreshed = await request(
     `https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(
-      config(),
+      config().apiKey,
     )}`,
     { grant_type: 'refresh_token', refresh_token: saved.refreshToken },
     true,
@@ -160,6 +178,7 @@ export async function restoreMember(saved: MemberSession) {
   if (!user || user.disabled || user.localId !== saved.uid)
     throw new AuthError('USER_DISABLED', 'Please log in again.');
   return {
+    projectId: config().projectId,
     uid: user.localId,
     email: user.email || '',
     token: refreshed.id_token,
@@ -189,4 +208,5 @@ export const memberStore = {
   },
   flush: () => writes,
 };
-export const draftKey = (uid: string, slug: string) => `draft:${uid}:${slug}`;
+export const draftKey = (uid: string, slug: string) =>
+  `cloud-draft:${config().projectId}:${uid}:${slug}`;

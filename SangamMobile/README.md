@@ -13,7 +13,7 @@ Native React Native CLI app. **No Expo and no WebView.** Connects directly to th
 - District/community report filters, totals, pagination and summary/family/member CSV export.
 - Community administrator form editor: section and question editing, draft saving, native preview and publishing. Form editor actions respect backend permissions. Managers have read access because the existing backend does not grant them `forms:write`.
 
-After member sign-in, form answers and the current section are saved in encrypted, account-scoped storage on the phone. See [AUTH_SETUP.md](AUTH_SETUP.md) to activate email/password and Google sign-in before building. Member registration is locked to Krishnavaha; admin form previews may still preview other communities. Admin data and credentials are not bundled in the APK. The API remains the authority for access control and validation.
+After member sign-in, form answers and the current section are saved in encrypted, account-scoped storage on the phone. See [AUTH_SETUP.md](AUTH_SETUP.md) to activate email/password and Google sign-in in Google Cloud Console before building. Member registration is locked to Krishnavaha; admin form previews may still preview other communities. Admin data and credentials are not bundled in the APK. The API remains the authority for access control and validation.
 
 ## Run on your Windows computer
 

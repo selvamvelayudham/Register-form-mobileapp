@@ -14,6 +14,7 @@ import {
   emailSignIn,
   googleSignIn,
   memberStore,
+  memberSessionKey,
   MemberSession,
   resetPassword,
   restoreMember,
@@ -36,19 +37,20 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
   useEffect(() => {
     let alive = true;
     memberStore
-      .read('member')
+      .clear('member') // Remove the previous authentication configuration's session.
+      .then(() => memberStore.read(memberSessionKey()))
       .then(async saved => {
         if (!saved) return;
         const restored = await restoreMember(saved);
         if (restored) {
-          await memberStore.save('member', restored);
+          await memberStore.save(memberSessionKey(), restored);
           if (alive) setMember(restored);
         }
       })
       .catch(async err => {
         // Keep the saved refresh token on temporary network failure.
         if (err instanceof AuthError)
-          await memberStore.clear('member').catch(() => {});
+          await memberStore.clear(memberSessionKey()).catch(() => {});
         if (alive) setError(err.message);
       })
       .finally(() => {
@@ -63,7 +65,7 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
     setError('');
     try {
       const next = await action();
-      await memberStore.save('member', next);
+      await memberStore.save(memberSessionKey(), next);
       setPassword('');
       setConfirm('');
       setMember(next);
@@ -76,7 +78,7 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
   const logout = async () => {
     try {
       await memberStore.flush();
-      await memberStore.clear('member');
+      await memberStore.clear(memberSessionKey());
       setMember(null);
       setError('');
       NativeModules.SangamDevice.googleSignOut().catch(() => {});

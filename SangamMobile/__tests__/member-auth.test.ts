@@ -4,6 +4,7 @@ import {
   emailSignIn,
   googleSignIn,
   memberStore,
+  memberSessionKey,
   restoreMember,
   validateCredentials,
 } from '../src/memberAuth';
@@ -12,7 +13,7 @@ const fetchMock = jest.fn();
 const result = {
   localId: 'member-1',
   email: 'person@gmail.com',
-  idToken: 'verified-firebase-token',
+  idToken: 'verified-cloud-token',
   refreshToken: 'refresh',
   expiresIn: '3600',
 };
@@ -20,7 +21,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   globalThis.fetch = fetchMock;
   NativeModules.SangamDevice = {
-    firebaseApiKey: 'test-public-api-key',
+    googleCloudProjectId: 'test-cloud-project',
+    googleCloudApiKey: 'test-public-api-key',
     googleSignIn: jest.fn().mockResolvedValue('google-token'),
     saveSecure: jest.fn().mockResolvedValue(null),
     readSecure: jest.fn().mockResolvedValue(null),
@@ -39,20 +41,20 @@ test('registration validates email, password length and confirmation', () => {
   );
   expect(validateCredentials('person@gmail.com', 'short', false)).toBe('');
 });
-test('email signup uses Firebase and never persists a password', async () => {
+test('email signup uses Google Cloud Identity Platform and never persists a password', async () => {
   const account = await emailSignIn(' Person@Gmail.com ', 'my-password', true);
   expect(fetchMock.mock.calls[0][0]).toContain('accounts:signUp');
   expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({
     email: 'person@gmail.com',
     password: 'my-password',
   });
-  await memberStore.save('member', account);
+  await memberStore.save(memberSessionKey(), account);
   expect(NativeModules.SangamDevice.saveSecure.mock.calls[0][1]).not.toContain(
     'my-password',
   );
 });
-test('Google credentials must be verified by Firebase', async () => {
-  expect((await googleSignIn()).token).toBe('verified-firebase-token');
+test('Google credentials must be verified by Identity Platform', async () => {
+  expect((await googleSignIn()).token).toBe('verified-cloud-token');
   expect(fetchMock.mock.calls[0][0]).toContain('accounts:signInWithIdp');
   expect(JSON.parse(fetchMock.mock.calls[0][1].body).postBody).toBe(
     'id_token=google-token&providerId=google.com',
@@ -82,6 +84,7 @@ test('restoration rejects a refreshed token for a different identity', async () 
   });
   await expect(
     restoreMember({
+      projectId: 'test-cloud-project',
       uid: 'member-1',
       email: 'person@gmail.com',
       token: 'old',
@@ -127,4 +130,32 @@ test('completed submissions restore receipts rather than unfinished form details
   expect(
     restoreDraft({ ...saved, receiptExpiresAt: 0 }, 4)?.receipt,
   ).toBeNull();
+});
+
+test('does not use the removed legacy API key as a fallback', async () => {
+  NativeModules.SangamDevice = {
+    firebaseApiKey: 'legacy-key',
+    googleCloudProjectId: 'test-cloud-project',
+  };
+  await expect(
+    emailSignIn('person@gmail.com', 'my-password', false),
+  ).rejects.toThrow('temporarily unavailable');
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+test('sessions and drafts cannot cross Google Cloud projects', async () => {
+  const previousKey = draftKey('same-member', 'same-community');
+  NativeModules.SangamDevice.googleCloudProjectId = 'other-cloud-project';
+  expect(draftKey('same-member', 'same-community')).not.toBe(previousKey);
+  expect(memberSessionKey()).toBe('cloud-member:other-cloud-project');
+  await expect(
+    restoreMember({
+      uid: 'same-member',
+      email: 'person@gmail.com',
+      token: 'old',
+      refreshToken: 'old-refresh',
+      expiresAt: 0,
+      projectId: 'test-cloud-project',
+    }),
+  ).rejects.toThrow('log in again');
+  expect(fetchMock).not.toHaveBeenCalled();
 });

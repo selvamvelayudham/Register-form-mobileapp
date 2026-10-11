@@ -85,10 +85,11 @@ android {
         applicationId "tech.shreeswayam.sangam"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        buildConfigField "String", "FIREBASE_API_KEY", authSetting("FIREBASE_API_KEY")
+        buildConfigField "String", "GOOGLE_CLOUD_API_KEY", authSetting("GOOGLE_CLOUD_API_KEY")
+        buildConfigField "String", "GOOGLE_CLOUD_PROJECT_ID", authSetting("GOOGLE_CLOUD_PROJECT_ID")
         buildConfigField "String", "GOOGLE_WEB_CLIENT_ID", authSetting("GOOGLE_WEB_CLIENT_ID")
-        versionCode 2
-        versionName "1.1"
+        versionCode 3
+        versionName "1.2"
     }
     signingConfigs {
         debug {

@@ -2,7 +2,7 @@
 
 Mandatory member registration/login, email/password and native Google sign-in, account-scoped encrypted draft recovery, and cleaner aligned screens have been added. Taluk and street/area inputs are removed and the community name is corrected to **Krishnavaha**.
 
-**Authentication requires Firebase setup before use.** See [AUTH_SETUP.md](SangamMobile/AUTH_SETUP.md) for provider configuration, signing fingerprints and the two GitHub Actions settings. Saved progress currently resumes on the same phone.
+**Authentication uses Google Cloud Identity Platform and requires Google Cloud setup before use.** See [AUTH_SETUP.md](SangamMobile/AUTH_SETUP.md) for provider configuration, signing fingerprints and the Google Cloud GitHub Actions settings. Saved progress currently resumes on the same phone.
 
 # Sangam Registration mobile app
 

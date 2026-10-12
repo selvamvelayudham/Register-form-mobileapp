@@ -22,6 +22,8 @@ def adb(*args):
 def launch(apk, version=None):
     adb('install', '-r', apk)
     adb('shell', 'pm', 'clear', PACKAGE)
+    adb('shell', 'input', 'keyevent', 'KEYCODE_WAKEUP')
+    adb('shell', 'wm', 'dismiss-keyguard')
     adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/.MainActivity')
     output = adb('shell', 'wm', 'size')
     width, height = map(int, re.search(r'(\d+)x(\d+)', output).groups())
@@ -51,6 +53,10 @@ def launch(apk, version=None):
     if not version:
         print('Previous APK startup result was inconclusive on the emulator.')
         return False
+    # Fresh installation, before any account entry: diagnostics contain no member credentials.
+    print('Startup UI labels: ' + text[:2500])
+    logs = adb('logcat', '-d', '-t', '300', 'ReactNativeJS:E', 'AndroidRuntime:E', '*:S')
+    print('Startup runtime diagnostics: ' + logs[-8000:])
     raise RuntimeError('Updated APK did not show its native version on the account screen')
 
 

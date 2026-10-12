@@ -152,3 +152,5 @@ The APK workflow now verifies that the three settings are present and formatted 
 ## Android runtime configuration loading
 
 Version 1.4 reads build settings through the explicit `getAuthConfiguration` native Promise method before restoring sessions or making account requests. It does not depend on constants being flattened onto the module object. The login screen shows the version returned by Android and offers startup retry. Install the configured version 1.4 APK over previous installations; the Google Cloud settings themselves do not need to be re-entered.
+
+The emulator check also registers a generated reserved-domain test account through the actual APK, checks encrypted session persistence by force-stopping and reopening the app, and removes the temporary Cloud account. It never uses a real member's password or submits family records.

@@ -11,6 +11,7 @@ import {
 import { NativeModules } from 'react-native';
 import {
   AuthError,
+  initializeAuth,
   emailSignIn,
   googleSignIn,
   memberStore,
@@ -34,10 +35,17 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [appVersion, setAppVersion] = useState('');
+  const [restoreRetry, setRestoreRetry] = useState(0);
   useEffect(() => {
     let alive = true;
-    memberStore
-      .clear('member') // Remove the previous authentication configuration's session.
+    setRestoring(true);
+    setError('');
+    initializeAuth()
+      .then(info => {
+        if (alive) setAppVersion(info.appVersion);
+        return memberStore.clear('member');
+      })
       .then(() => memberStore.read(memberSessionKey()))
       .then(async saved => {
         if (!saved) return;
@@ -59,7 +67,7 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [restoreRetry]);
   async function run(action: () => Promise<MemberSession>) {
     setBusy(true);
     setError('');
@@ -152,7 +160,9 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
               />
             </View>
           </View>
-          {error ? <ErrorBox error={error} /> : null}
+          {error ? (
+            <ErrorBox error={error} retry={() => setRestoreRetry(r => r + 1)} />
+          ) : null}
           <View>
             <Input
               label="Email address"
@@ -287,6 +297,11 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
           disabled={busy}
           onPress={onAdmin}
         />
+        {appVersion ? (
+          <Text style={[s.muted, { textAlign: 'center' }]}>
+            Version {appVersion}
+          </Text>
+        ) : null}
       </View>
     </ScrollView>
   );

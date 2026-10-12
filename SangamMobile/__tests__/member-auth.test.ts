@@ -1,6 +1,7 @@
 import { NativeModules } from 'react-native';
 import {
   draftKey,
+  initializeAuth,
   emailSignIn,
   googleSignIn,
   memberStore,
@@ -17,17 +18,23 @@ const result = {
   refreshToken: 'refresh',
   expiresIn: '3600',
 };
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
   globalThis.fetch = fetchMock;
   NativeModules.SangamDevice = {
-    googleCloudProjectId: 'test-cloud-project',
-    googleCloudApiKey: 'test-public-api-key',
+    getAuthConfiguration: jest
+      .fn()
+      .mockResolvedValue({
+        googleCloudProjectId: 'test-cloud-project',
+        googleCloudApiKey: 'test-public-api-key',
+        appVersion: '1.4',
+      }),
     googleSignIn: jest.fn().mockResolvedValue('google-token'),
     saveSecure: jest.fn().mockResolvedValue(null),
     readSecure: jest.fn().mockResolvedValue(null),
   };
   fetchMock.mockResolvedValue({ ok: true, json: async () => result });
+  await initializeAuth();
 });
 test('registration validates email, password length and confirmation', () => {
   expect(
@@ -142,12 +149,22 @@ test('does not use the removed legacy API key as a fallback', async () => {
   };
   await expect(
     emailSignIn('person@gmail.com', 'my-password', false),
-  ).rejects.toThrow('temporarily unavailable');
+  ).rejects.toThrow('latest Sangam update');
   expect(fetchMock).not.toHaveBeenCalled();
 });
 test('sessions and drafts cannot cross Google Cloud projects', async () => {
   const previousKey = draftKey('same-member', 'same-community');
-  NativeModules.SangamDevice.googleCloudProjectId = 'other-cloud-project';
+  NativeModules.SangamDevice = {
+    ...NativeModules.SangamDevice,
+    getAuthConfiguration: jest
+      .fn()
+      .mockResolvedValue({
+        googleCloudProjectId: 'other-cloud-project',
+        googleCloudApiKey: 'test-public-api-key',
+        appVersion: '1.4',
+      }),
+  };
+  await initializeAuth();
   expect(draftKey('same-member', 'same-community')).not.toBe(previousKey);
   expect(memberSessionKey()).toBe('cloud-member:other-cloud-project');
   await expect(
@@ -161,4 +178,43 @@ test('sessions and drafts cannot cross Google Cloud projects', async () => {
     }),
   ).rejects.toThrow('log in again');
   expect(fetchMock).not.toHaveBeenCalled();
+});
+
+test('reads configuration from a method-only native module before signup', async () => {
+  NativeModules.SangamDevice = {
+    getAuthConfiguration: jest
+      .fn()
+      .mockResolvedValue({
+        googleCloudApiKey: 'native-api-key',
+        googleCloudProjectId: 'native-cloud-project',
+        appVersion: '1.4',
+      }),
+  };
+  const account = await emailSignIn('person@gmail.com', 'my-password', true);
+  expect(account.projectId).toBe('native-cloud-project');
+  expect(fetchMock.mock.calls[0][0]).toContain('key=native-api-key');
+  expect(NativeModules.SangamDevice.getAuthConfiguration).toHaveBeenCalledTimes(
+    1,
+  );
+});
+test('waits for native configuration and retries a transient native failure', async () => {
+  NativeModules.SangamDevice = {
+    getAuthConfiguration: jest
+      .fn()
+      .mockRejectedValueOnce(
+        new Error('Temporary native initialization failure'),
+      )
+      .mockResolvedValue({
+        googleCloudApiKey: 'native-api-key',
+        googleCloudProjectId: 'native-cloud-project',
+        appVersion: '1.4',
+      }),
+  };
+  await expect(
+    emailSignIn('person@gmail.com', 'my-password', false),
+  ).rejects.toThrow('initialization failure');
+  expect(fetchMock).not.toHaveBeenCalled();
+  await expect(
+    emailSignIn('person@gmail.com', 'my-password', false),
+  ).resolves.toMatchObject({ projectId: 'native-cloud-project' });
 });

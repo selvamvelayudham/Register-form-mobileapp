@@ -9,18 +9,61 @@ export type MemberSession = {
   expiresAt: number;
 };
 const device = () => NativeModules.SangamDevice;
+type AuthConfiguration = {
+  apiKey: string;
+  projectId: string;
+  appVersion: string;
+};
+let configuration: AuthConfiguration | undefined;
+let configurationModule: any;
+let configurationLoad: Promise<AuthConfiguration> | undefined;
+
+export async function initializeAuth(): Promise<AuthConfiguration> {
+  const native = device();
+  if (native !== configurationModule) {
+    configurationModule = native;
+    configuration = undefined;
+    configurationLoad = undefined;
+  }
+  if (configuration) return configuration;
+  if (!configurationLoad) {
+    configurationLoad = Promise.resolve()
+      .then(async () => {
+        if (typeof native?.getAuthConfiguration !== 'function')
+          throw new Error(
+            'Please install the latest Sangam update and reopen the app.',
+          );
+        const values = await native.getAuthConfiguration();
+        const apiKey = values?.googleCloudApiKey;
+        const projectId = values?.googleCloudProjectId;
+        if (
+          typeof apiKey !== 'string' ||
+          !apiKey ||
+          typeof projectId !== 'string' ||
+          !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId)
+        )
+          throw new Error(
+            'Account settings could not be loaded. Please close and reopen the latest Sangam app.',
+          );
+        configuration = {
+          apiKey,
+          projectId,
+          appVersion:
+            typeof values.appVersion === 'string' ? values.appVersion : '',
+        };
+        return configuration;
+      })
+      .catch(error => {
+        configurationLoad = undefined;
+        throw error;
+      });
+  }
+  return configurationLoad;
+}
 const config = () => {
-  const apiKey = device()?.googleCloudApiKey;
-  const projectId = device()?.googleCloudProjectId;
-  if (
-    !apiKey ||
-    !projectId ||
-    !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId)
-  )
-    throw new Error(
-      'Account sign-in is temporarily unavailable. Please contact your community team.',
-    );
-  return { apiKey: apiKey as string, projectId: projectId as string };
+  if (!configuration)
+    throw new Error('Preparing account settings. Please try again.');
+  return configuration;
 };
 export const memberSessionKey = () => `cloud-member:${config().projectId}`;
 const messages: Record<string, string> = {
@@ -84,13 +127,15 @@ async function request(url: string, body: any, form = false) {
     clearTimeout(timer);
   }
 }
-const accounts = (action: string, body: any) =>
-  request(
+const accounts = async (action: string, body: any) => {
+  await initializeAuth();
+  return request(
     `https://identitytoolkit.googleapis.com/v1/accounts:${action}?key=${encodeURIComponent(
       config().apiKey,
     )}`,
     body,
   );
+};
 function session(result: any): MemberSession {
   if (result.needConfirmation)
     throw new AuthError(
@@ -137,7 +182,7 @@ export async function emailSignIn(
   );
 }
 export async function googleSignIn() {
-  config();
+  await initializeAuth();
   const idToken = await device().googleSignIn();
   // Google Cloud Identity Platform verifies Google's token before issuing a session.
   return session(
@@ -165,6 +210,7 @@ export async function resetPassword(email: string) {
   }
 }
 export async function restoreMember(saved: MemberSession) {
+  await initializeAuth();
   if (!saved?.uid || !saved.refreshToken) return null;
   if (saved.projectId !== config().projectId)
     throw new AuthError('PROJECT_CHANGED', 'Please log in again.');

@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -36,6 +37,39 @@ jobs:
       - run: npm ci
       - run: npm run typecheck && npm test && npm run lint
       - run: chmod +x android/gradlew && cd android && ./gradlew assembleRelease --no-daemon
+      - name: Read APK version
+        id: apk-metadata
+        run: |
+          python3 - <<'PY_VERSION'
+          import os, re
+          from pathlib import Path
+          version = re.search(r'versionName "([^"]+)"', Path('android/app/build.gradle').read_text()).group(1)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out: out.write('version=' + version + '\n')
+          PY_VERSION
+      - name: Download previous configured APK for startup comparison
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: Sangam-Registration-APK
+          run-id: 38209418523
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: SangamMobile/build/previous-apk
+      - name: Enable KVM for Android runtime verification
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify native configuration on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+          working-directory: SangamMobile
+          script: python3 scripts/smoke-auth-startup.py build/previous-apk/app-release.apk android/app/build/outputs/apk/release/app-release.apk ${{ steps.apk-metadata.outputs.version }}
       - uses: actions/upload-artifact@v4
         with:
           name: Sangam-Registration-APK

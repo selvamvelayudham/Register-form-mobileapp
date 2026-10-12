@@ -6,6 +6,13 @@ import { Button } from '../src/ui';
 import * as auth from '../src/memberAuth';
 jest.mock('../src/memberAuth', () => ({
   ...jest.requireActual('../src/memberAuth'),
+  initializeAuth: jest
+    .fn()
+    .mockResolvedValue({
+      apiKey: 'native-api-key',
+      projectId: 'test-cloud-project',
+      appVersion: '1.4',
+    }),
   emailSignIn: jest.fn(),
   googleSignIn: jest.fn(),
   memberSessionKey: jest.fn(() => 'cloud-member:test-cloud-project'),
@@ -28,6 +35,8 @@ test('requires authentication and offers email registration, login and Google', 
   await act(async () => {
     tree = create(<MemberGate onAdmin={() => {}} />);
   });
+  expect(auth.initializeAuth).toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain('1.4');
   expect(auth.memberStore.clear).toHaveBeenCalledWith('member');
   expect(auth.memberStore.read).toHaveBeenCalledWith(
     'cloud-member:test-cloud-project',

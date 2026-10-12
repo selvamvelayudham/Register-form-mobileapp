@@ -30,6 +30,14 @@ class SangamDevice(private val context: ReactApplicationContext) : ReactContextB
   private val authScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
   private var googleBusy = false
   override fun getConstants(): Map<String, Any> = mapOf("googleCloudApiKey" to BuildConfig.GOOGLE_CLOUD_API_KEY, "googleCloudProjectId" to BuildConfig.GOOGLE_CLOUD_PROJECT_ID)
+  // An explicit Promise method works with both legacy and interop module objects.
+  @ReactMethod fun getAuthConfiguration(promise: Promise) {
+    promise.resolve(Arguments.createMap().apply {
+      putString("googleCloudApiKey", BuildConfig.GOOGLE_CLOUD_API_KEY)
+      putString("googleCloudProjectId", BuildConfig.GOOGLE_CLOUD_PROJECT_ID)
+      putString("appVersion", BuildConfig.VERSION_NAME)
+    })
+  }
   private val executor = Executors.newSingleThreadExecutor()
   private var pending: Promise? = null
   private var downloadUrl = ""

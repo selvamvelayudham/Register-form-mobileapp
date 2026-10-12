@@ -1,4 +1,4 @@
-# Google Cloud registration and login — version 1.3
+# Google Cloud registration and login — version 1.4
 
 The app supports **Register with email/password**, **Log in with email/password**, **Sign in with Google**, password reset, and encrypted progress recovery on the same phone. Member authentication now uses **Google Cloud Identity Platform REST APIs**, configured entirely through **Google Cloud Console**. Google account selection uses Android Credential Manager and Google Auth Platform OAuth clients. Admin login still uses the existing Sangam API.
 
@@ -148,3 +148,7 @@ Official guides: [Identity Platform REST API](https://docs.cloud.google.com/iden
 ## Automated build configuration check
 
 The APK workflow now verifies that the three settings are present and formatted correctly, checks the project/API-key/OAuth-client association with Google and uses an existing authorized domain for its provider probe, verifies the Google provider client ID, and probes password sign-in using a random reserved-domain identifier without creating an account. It logs only status messages. Some legacy public project responses return only a numeric project number; in that case the check reports that text Project ID ownership could not be confirmed. Native Android OAuth package/certificate registration and actual member sign-in must still be tested on a device.
+
+## Android runtime configuration loading
+
+Version 1.4 reads build settings through the explicit `getAuthConfiguration` native Promise method before restoring sessions or making account requests. It does not depend on constants being flattened onto the module object. The login screen shows the version returned by Android and offers startup retry. Install the configured version 1.4 APK over previous installations; the Google Cloud settings themselves do not need to be re-entered.

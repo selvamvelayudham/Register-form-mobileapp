@@ -1,4 +1,4 @@
-# Google Cloud registration and login — version 1.2
+# Google Cloud registration and login — version 1.3
 
 The app supports **Register with email/password**, **Log in with email/password**, **Sign in with Google**, password reset, and encrypted progress recovery on the same phone. Member authentication now uses **Google Cloud Identity Platform REST APIs**, configured entirely through **Google Cloud Console**. Google account selection uses Android Credential Manager and Google Auth Platform OAuth clients. Admin login still uses the existing Sangam API.
 
@@ -144,3 +144,7 @@ The file is then at `SangamMobile\android\app\build\outputs\apk\release\app-rele
 Live sign-in must be tested with your Cloud configuration on a physical Android device; repository tests do not validate an owner's unconfigured project.
 
 Official guides: [Identity Platform REST API](https://docs.cloud.google.com/identity-platform/docs/use-rest-api), [email/password setup](https://docs.cloud.google.com/identity-platform/docs/sign-in-user-email), [Google provider setup](https://docs.cloud.google.com/identity-platform/docs/web/google), [native Google account picker](https://developer.android.com/identity/sign-in/credential-manager-siwg-implementation).
+
+## Automated build configuration check
+
+The APK workflow now verifies that the three settings are present and formatted correctly, checks the project/API-key/OAuth-client association and authorized domain with Google, verifies the Google provider client ID, and probes password sign-in using a random reserved-domain identifier without creating an account. It logs only status messages. Some legacy public project responses return only a numeric project number; in that case the check reports that text Project ID ownership could not be confirmed. Native Android OAuth package/certificate registration and actual member sign-in must still be tested on a device.

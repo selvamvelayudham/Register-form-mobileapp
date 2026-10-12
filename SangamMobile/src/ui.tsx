@@ -143,11 +143,13 @@ export const s = StyleSheet.create({
 });
 export function Button({
   title,
+  accessibilityLabel,
   onPress,
   secondary = false,
   disabled = false,
 }: {
   title: string;
+  accessibilityLabel?: string;
   onPress: () => void;
   secondary?: boolean;
   disabled?: boolean;
@@ -155,6 +157,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       onPress={onPress}
       disabled={disabled}

@@ -88,8 +88,8 @@ android {
         buildConfigField "String", "GOOGLE_CLOUD_API_KEY", authSetting("GOOGLE_CLOUD_API_KEY")
         buildConfigField "String", "GOOGLE_CLOUD_PROJECT_ID", authSetting("GOOGLE_CLOUD_PROJECT_ID")
         buildConfigField "String", "GOOGLE_WEB_CLIENT_ID", authSetting("GOOGLE_WEB_CLIENT_ID")
-        versionCode 5
-        versionName "1.4"
+        versionCode 6
+        versionName "1.5"
     }
     signingConfigs {
         debug {

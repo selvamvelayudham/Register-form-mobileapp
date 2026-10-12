@@ -23,12 +23,15 @@ import {
 } from './memberAuth';
 import { Button, ErrorBox, Input, Loading, s } from './ui';
 import Registration from './Registration';
+import { accountStyles as a } from './MemberProfile';
 import { REGISTRATION_COMMUNITY } from './registrationConfig';
 
 export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
   const [member, setMember] = useState<MemberSession | null>(null);
   const [restoring, setRestoring] = useState(true);
   const [registering, setRegistering] = useState(false);
+  const [name, setName] = useState('');
+  const [notice, setNotice] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -68,15 +71,22 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
       alive = false;
     };
   }, [restoreRetry]);
-  async function run(action: () => Promise<MemberSession>) {
+  async function run(action: () => Promise<MemberSession>, newAccount = false) {
     setBusy(true);
     setError('');
+    setNotice('');
     try {
       const next = await action();
-      await memberStore.save(memberSessionKey(), next);
+      if (!newAccount) await memberStore.save(memberSessionKey(), next);
       setPassword('');
       setConfirm('');
-      setMember(next);
+      setShow(false);
+      if (newAccount) {
+        setRegistering(false);
+        setName('');
+        setEmail(next.email);
+        setNotice('Account created. Please log in to continue.');
+      } else setMember(next);
     } catch (err: any) {
       if (err.code !== 'GOOGLE_CANCELLED') setError(err.message);
     } finally {
@@ -88,6 +98,11 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
       await memberStore.flush();
       await memberStore.clear(memberSessionKey());
       setMember(null);
+      setRegistering(false);
+      setPassword('');
+      setConfirm('');
+      setShow(false);
+      setNotice('');
       setError('');
       NativeModules.SangamDevice.googleSignOut().catch(() => {});
     } catch {
@@ -112,12 +127,16 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={[
         s.body,
+        a.authBody,
         { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
       ]}
     >
       <View style={{ width: '100%', maxWidth: 480, gap: 20 }}>
-        <View style={{ gap: 6 }}>
-          <Text style={s.brand}>Sangam</Text>
+        <View style={a.brandBlock}>
+          <View style={a.brandMark}>
+            <Text style={a.brandLetter}>S</Text>
+          </View>
+          <Text style={[s.brand, a.brandTitle]}>Sangam</Text>
           <Text style={s.overline}>
             {REGISTRATION_COMMUNITY.name.toUpperCase()} COMMUNITY
           </Text>
@@ -125,14 +144,15 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
             Your family. Your community. One place to stay connected.
           </Text>
         </View>
-        <View style={[s.card, { padding: 24 }]}>
+        <View style={[s.card, a.authCard]}>
           <View style={{ gap: 8 }}>
             <Text accessibilityRole="header" style={s.h1}>
               {registering ? 'Create your account' : 'Welcome back'}
             </Text>
             <Text style={s.muted}>
-              Sign in to register your family. Your progress is saved on this
-              phone so you can return anytime.
+              {registering
+                ? 'Create an account to start your family registration.'
+                : 'Log in to continue your family registration. Your progress is saved on this phone.'}
             </Text>
           </View>
           <View style={s.row}>
@@ -145,6 +165,8 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
                   setRegistering(false);
                   setError('');
                   setConfirm('');
+                  setPassword('');
+                  setShow(false);
                 }}
               />
             </View>
@@ -155,15 +177,35 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
                 secondary={!registering}
                 onPress={() => {
                   setRegistering(true);
+                  setPassword('');
+                  setShow(false);
+                  setNotice('');
                   setError('');
                 }}
               />
             </View>
           </View>
+          {notice ? (
+            <View style={a.success}>
+              <Text accessibilityLiveRegion="polite" style={a.successText}>
+                {notice}
+              </Text>
+            </View>
+          ) : null}
           {error ? (
             <ErrorBox error={error} retry={() => setRestoreRetry(r => r + 1)} />
           ) : null}
           <View>
+            {registering ? (
+              <Input
+                label="Full name"
+                value={name}
+                disabled={busy}
+                onChange={setName}
+                placeholder="Your full name"
+                maxLength={100}
+              />
+            ) : null}
             <Input
               label="Email address"
               type="email"
@@ -219,6 +261,9 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
             ) : null}
           </View>
           <Button
+            accessibilityLabel={
+              registering ? 'Create account' : 'Log in to your account'
+            }
             title={
               busy ? 'Please wait…' : registering ? 'Create account' : 'Log in'
             }
@@ -230,11 +275,18 @@ export default function MemberGate({ onAdmin }: { onAdmin: () => void }) {
                 registering,
                 confirm,
               );
+              if (registering && !name.trim()) {
+                setError('Enter your full name.');
+                return;
+              }
               if (problem) {
                 setError(problem);
                 return;
               }
-              run(() => emailSignIn(email, password, registering));
+              run(
+                () => emailSignIn(email, password, registering, name),
+                registering,
+              );
             }}
           />
           {!registering ? (

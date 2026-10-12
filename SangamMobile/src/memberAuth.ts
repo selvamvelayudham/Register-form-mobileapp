@@ -7,6 +7,8 @@ export type MemberSession = {
   token: string;
   refreshToken: string;
   expiresAt: number;
+  displayName?: string;
+  signInMethod?: string;
 };
 const device = () => NativeModules.SangamDevice;
 type AuthConfiguration = {
@@ -148,6 +150,9 @@ function session(result: any): MemberSession {
     projectId: config().projectId,
     uid: result.localId,
     email: result.email || '',
+    displayName: result.displayName || '',
+    signInMethod:
+      result.providerId === 'google.com' ? 'Google' : 'Email and password',
     token: result.idToken,
     refreshToken: result.refreshToken,
     expiresAt: Date.now() + Number(result.expiresIn || 3600) * 1000,
@@ -172,11 +177,15 @@ export async function emailSignIn(
   email: string,
   password: string,
   registering: boolean,
+  displayName = '',
 ) {
   return session(
     await accounts(registering ? 'signUp' : 'signInWithPassword', {
       email: email.trim().toLowerCase(),
       password,
+      ...(registering && displayName.trim()
+        ? { displayName: displayName.trim() }
+        : {}),
       returnSecureToken: true,
     }),
   );
@@ -229,6 +238,14 @@ export async function restoreMember(saved: MemberSession) {
     projectId: config().projectId,
     uid: user.localId,
     email: user.email || '',
+    displayName: user.displayName || '',
+    signInMethod:
+      saved.signInMethod ||
+      (user.providerUserInfo?.some(
+        (provider: any) => provider.providerId === 'google.com',
+      )
+        ? 'Google'
+        : 'Email and password'),
     token: refreshed.id_token,
     refreshToken: refreshed.refresh_token,
     expiresAt: Date.now() + Number(refreshed.expires_in) * 1000,

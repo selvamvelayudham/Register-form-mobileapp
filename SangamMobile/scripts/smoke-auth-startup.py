@@ -96,7 +96,7 @@ def wait_for_registration():
     while time.monotonic() < deadline:
         root = screen()
         text = ' '.join(n.attrib.get('text', '') + ' ' + n.attrib.get('content-desc', '') for n in root.iter('node'))
-        if 'Family Registration Portal' in text and 'Sign out' in text:
+        if 'Family Registration Portal' in text and 'Open profile' in text:
             return
         if any(message in text for message in ('settings could not be loaded', 'temporarily unavailable', 'Could not securely', 'could not be saved')):
             raise RuntimeError('The Android account flow failed before family registration opened')
@@ -131,16 +131,44 @@ def verify_registration():
     password = 'Aa1!' + uuid.uuid4().hex
     try:
         interact('Register')
+        interact('Full name', 'SangamTestMember')
         interact('Email address', email)
         interact('Password', password)
         interact('Confirm password', password)
         interact('Create account')
+        deadline = time.monotonic() + 90
+        while time.monotonic() < deadline:
+            root = screen()
+            text = ' '.join(n.attrib.get('text', '') for n in root.iter('node'))
+            if 'Account created. Please log in to continue.' in text and 'Welcome back' in text:
+                break
+            time.sleep(2)
+        else:
+            raise RuntimeError('Registration did not return to Login')
+        interact('Password', password)
+        interact('Log in to your account')
         wait_for_registration()
-        print('Actual release APK registration and encrypted session save passed on Android.')
+        interact('Open profile')
+        root = screen()
+        text = ' '.join(n.attrib.get('text', '') for n in root.iter('node'))
+        if 'SangamTestMember' not in text or email not in text or 'Account details' not in text:
+            raise RuntimeError('Profile did not show the authenticated account details')
+        interact('Close profile')
+        print('Release APK signup-to-login, password login, profile details and form return passed on Android.')
         adb('shell', 'am', 'force-stop', PACKAGE)
         adb('shell', 'am', 'start', '-W', '-n', PACKAGE + '/.MainActivity')
         wait_for_registration()
         print('Actual release APK restored its account and reopened registration after restart.')
+        interact('Open profile')
+        interact('Logout')
+        deadline = time.monotonic() + 60
+        while time.monotonic() < deadline:
+            if 'Welcome back' in ' '.join(n.attrib.get('text', '') for n in screen().iter('node')):
+                print('Profile logout returned to Login successfully.')
+                break
+            time.sleep(2)
+        else:
+            raise RuntimeError('Profile logout did not return to Login')
     finally:
         cleanup_account(email, password)
         adb('shell', 'pm', 'clear', PACKAGE)

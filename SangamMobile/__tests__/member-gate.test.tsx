@@ -6,13 +6,11 @@ import { Button } from '../src/ui';
 import * as auth from '../src/memberAuth';
 jest.mock('../src/memberAuth', () => ({
   ...jest.requireActual('../src/memberAuth'),
-  initializeAuth: jest
-    .fn()
-    .mockResolvedValue({
-      apiKey: 'native-api-key',
-      projectId: 'test-cloud-project',
-      appVersion: '1.4',
-    }),
+  initializeAuth: jest.fn().mockResolvedValue({
+    apiKey: 'native-api-key',
+    projectId: 'test-cloud-project',
+    appVersion: '1.5',
+  }),
   emailSignIn: jest.fn(),
   googleSignIn: jest.fn(),
   memberSessionKey: jest.fn(() => 'cloud-member:test-cloud-project'),
@@ -36,7 +34,7 @@ test('requires authentication and offers email registration, login and Google', 
     tree = create(<MemberGate onAdmin={() => {}} />);
   });
   expect(auth.initializeAuth).toHaveBeenCalled();
-  expect(JSON.stringify(tree.toJSON())).toContain('1.4');
+  expect(JSON.stringify(tree.toJSON())).toContain('1.5');
   expect(auth.memberStore.clear).toHaveBeenCalledWith('member');
   expect(auth.memberStore.read).toHaveBeenCalledWith(
     'cloud-member:test-cloud-project',
@@ -50,5 +48,68 @@ test('requires authentication and offers email registration, login and Google', 
   ).toContain('Confirm password');
   act(() => press(tree, 'Create account'));
   expect(auth.emailSignIn).not.toHaveBeenCalled();
+  act(() => tree.unmount());
+});
+
+test('email account creation returns to Login without saving an authenticated session', async () => {
+  jest.clearAllMocks();
+  (auth.emailSignIn as jest.Mock).mockResolvedValue({
+    uid: 'new-member',
+    email: 'new@example.com',
+    displayName: 'New Member',
+  });
+  let tree!: ReactTestRenderer;
+  await act(async () => {
+    tree = create(<MemberGate onAdmin={() => {}} />);
+  });
+  act(() => press(tree, 'Register'));
+  act(() => {
+    const fields = tree.root.findAllByType(TextInput);
+    for (const [label, value] of [
+      ['Full name', 'New Member'],
+      ['Email address', 'new@example.com'],
+      ['Password', 'Password123'],
+      ['Confirm password', 'Password123'],
+    ])
+      fields
+        .find(field => field.props.accessibilityLabel === label)!
+        .props.onChangeText(value);
+  });
+  await act(async () => press(tree, 'Create account'));
+  expect(auth.emailSignIn).toHaveBeenCalledWith(
+    'new@example.com',
+    'Password123',
+    true,
+    'New Member',
+  );
+  expect(auth.memberStore.save).not.toHaveBeenCalled();
+  expect(JSON.stringify(tree.toJSON())).toContain(
+    'Account created. Please log in to continue.',
+  );
+  expect(JSON.stringify(tree.toJSON())).toContain('Welcome back');
+  expect(
+    tree.root
+      .findAllByType(TextInput)
+      .find(field => field.props.accessibilityLabel === 'Password')!.props
+      .value,
+  ).toBe('');
+  act(() =>
+    tree.root
+      .findAllByType(TextInput)
+      .find(field => field.props.accessibilityLabel === 'Password')!
+      .props.onChangeText('Password123'),
+  );
+  await act(async () =>
+    tree.root
+      .findAllByType(Button)
+      .find(
+        button => button.props.accessibilityLabel === 'Log in to your account',
+      )!
+      .props.onPress(),
+  );
+  expect(auth.memberStore.save).toHaveBeenCalledWith(
+    'cloud-member:test-cloud-project',
+    expect.objectContaining({ uid: 'new-member' }),
+  );
   act(() => tree.unmount());
 });

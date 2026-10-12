@@ -16,6 +16,7 @@ import {
 } from './forms';
 import { Button, Check, ErrorBox, Input, Loading, s } from './ui';
 import LocationFields from './LocationFields';
+import MemberProfile, { ProfileButton } from './MemberProfile';
 import {
   REGISTRATION_COMMUNITY,
   communityDisplayName,
@@ -440,6 +441,7 @@ export default function Registration({
   member,
   onLogout,
 }: any) {
+  const [profileOpen, setProfileOpen] = useState(false);
   const slug = previewCommunity?.slug || REGISTRATION_COMMUNITY.slug;
   const [data, setData] = useState<any>(null),
     [error, setError] = useState(''),
@@ -633,6 +635,18 @@ export default function Registration({
   };
   return (
     <View style={s.screen}>
+      {member && !preview && (
+        <MemberProfile
+          member={member}
+          visible={profileOpen}
+          onClose={() => setProfileOpen(false)}
+          onLogout={onLogout}
+          onAdmin={() => {
+            setProfileOpen(false);
+            onAdmin();
+          }}
+        />
+      )}
       {!preview && (
         <View style={s.header}>
           <View style={{ flex: 1 }}>
@@ -641,7 +655,15 @@ export default function Registration({
               Family Registration Portal · குடும்பப் பதிவு
             </Text>
           </View>
-          <Button title="Admin →" secondary onPress={onAdmin} />
+          {member ? (
+            <ProfileButton
+              member={member}
+              disabled={busy || saving}
+              onPress={() => setProfileOpen(true)}
+            />
+          ) : (
+            <Button title="Admin →" secondary onPress={onAdmin} />
+          )}
         </View>
       )}
       <ScrollView
@@ -650,8 +672,7 @@ export default function Registration({
         contentContainerStyle={s.body}
       >
         {member && !preview && (
-          <View style={s.card}>
-            <Text style={s.label}>{member.email}</Text>
+          <View>
             <Text accessibilityLiveRegion="polite" style={s.muted}>
               {draftStatus || 'Restoring your progress…'}
             </Text>
@@ -662,12 +683,6 @@ export default function Registration({
                 onPress={() => setDraftRetry(r => r + 1)}
               />
             )}
-            <Button
-              title="Sign out"
-              secondary
-              disabled={busy}
-              onPress={onLogout}
-            />
           </View>
         )}
         {!preview && (

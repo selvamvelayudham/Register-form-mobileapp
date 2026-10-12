@@ -22,13 +22,11 @@ beforeEach(async () => {
   jest.clearAllMocks();
   globalThis.fetch = fetchMock;
   NativeModules.SangamDevice = {
-    getAuthConfiguration: jest
-      .fn()
-      .mockResolvedValue({
-        googleCloudProjectId: 'test-cloud-project',
-        googleCloudApiKey: 'test-public-api-key',
-        appVersion: '1.4',
-      }),
+    getAuthConfiguration: jest.fn().mockResolvedValue({
+      googleCloudProjectId: 'test-cloud-project',
+      googleCloudApiKey: 'test-public-api-key',
+      appVersion: '1.4',
+    }),
     googleSignIn: jest.fn().mockResolvedValue('google-token'),
     saveSecure: jest.fn().mockResolvedValue(null),
     readSecure: jest.fn().mockResolvedValue(null),
@@ -156,13 +154,11 @@ test('sessions and drafts cannot cross Google Cloud projects', async () => {
   const previousKey = draftKey('same-member', 'same-community');
   NativeModules.SangamDevice = {
     ...NativeModules.SangamDevice,
-    getAuthConfiguration: jest
-      .fn()
-      .mockResolvedValue({
-        googleCloudProjectId: 'other-cloud-project',
-        googleCloudApiKey: 'test-public-api-key',
-        appVersion: '1.4',
-      }),
+    getAuthConfiguration: jest.fn().mockResolvedValue({
+      googleCloudProjectId: 'other-cloud-project',
+      googleCloudApiKey: 'test-public-api-key',
+      appVersion: '1.4',
+    }),
   };
   await initializeAuth();
   expect(draftKey('same-member', 'same-community')).not.toBe(previousKey);
@@ -182,13 +178,11 @@ test('sessions and drafts cannot cross Google Cloud projects', async () => {
 
 test('reads configuration from a method-only native module before signup', async () => {
   NativeModules.SangamDevice = {
-    getAuthConfiguration: jest
-      .fn()
-      .mockResolvedValue({
-        googleCloudApiKey: 'native-api-key',
-        googleCloudProjectId: 'native-cloud-project',
-        appVersion: '1.4',
-      }),
+    getAuthConfiguration: jest.fn().mockResolvedValue({
+      googleCloudApiKey: 'native-api-key',
+      googleCloudProjectId: 'native-cloud-project',
+      appVersion: '1.4',
+    }),
   };
   const account = await emailSignIn('person@gmail.com', 'my-password', true);
   expect(account.projectId).toBe('native-cloud-project');
@@ -217,4 +211,21 @@ test('waits for native configuration and retries a transient native failure', as
   await expect(
     emailSignIn('person@gmail.com', 'my-password', false),
   ).resolves.toMatchObject({ projectId: 'native-cloud-project' });
+});
+
+test('registration stores the supplied name in the Google Cloud account', async () => {
+  fetchMock.mockResolvedValue({
+    ok: true,
+    json: async () => ({ ...result, displayName: 'Example Member' }),
+  });
+  const account = await emailSignIn(
+    'person@gmail.com',
+    'my-password',
+    true,
+    ' Example Member ',
+  );
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body).displayName).toBe(
+    'Example Member',
+  );
+  expect(account.displayName).toBe('Example Member');
 });

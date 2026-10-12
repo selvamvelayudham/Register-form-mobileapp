@@ -67,10 +67,13 @@ def main():
         print("API key, Project ID and OAuth client association verified.")
     else:
         print("API key and OAuth client association verified; public API does not expose the text Project ID.")
-    check("shreeswayam.tech" in config.get("authorizedDomains", []), "Add shreeswayam.tech in Identity Platform authorized domains, then rerun the build.")
-    print("Application domain is authorized.")
+    domains = config.get("authorizedDomains", [])
+    probe_domain = next((d for d in domains if re.fullmatch(r"[a-zA-Z0-9.-]+", d)), None)
+    check(probe_domain, "Google provider configuration has no authorized domain for its non-destructive provider check.")
+    probe_uri = "http://localhost" if probe_domain == "localhost" else f"https://{probe_domain}"
+    print("Provider probe uses an existing authorized domain; native sign-in requires no website callback.")
 
-    status, google = google_request(base + "accounts:createAuthUri?" + urllib.parse.urlencode({"key": key}), {"providerId": "google.com", "continueUri": "https://shreeswayam.tech"})
+    status, google = google_request(base + "accounts:createAuthUri?" + urllib.parse.urlencode({"key": key}), {"providerId": "google.com", "continueUri": probe_uri})
     check(status == 200, f"Google provider check failed (HTTP {status}, {error_code(google)}). Enable Google in Identity Platform and check its Web Client ID/secret.")
     uri = urllib.parse.urlparse(google.get("authUri", ""))
     provider_client = urllib.parse.parse_qs(uri.query).get("client_id", [None])[0]

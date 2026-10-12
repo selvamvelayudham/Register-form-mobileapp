@@ -68,7 +68,7 @@ keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -st
 
 1. Return to **Identity Platform → Providers** → **Add a provider** → **Google**.
 2. Enable it. Enter the **Web Client ID** and **Web Client secret** created in step 3. The client secret stays in Google Cloud Console only.
-3. In Project settings / Authorized domains, add **`shreeswayam.tech`**. The app's ID-token exchange uses `https://shreeswayam.tech` as its request URI.
+3. Keep the project's existing authorized domains for provider setup. The native app exchanges a manually supplied Google ID token using Google's documented `http://localhost` request-URI marker. This is a JSON field, not a network request or browser redirect; network traffic remains HTTPS. Adding `shreeswayam.tech` is optional for a future web sign-in flow and is not required by this native flow.
 4. If the provider page asks for allowed external client IDs, add the web client ID used by this app.
 5. Save the provider.
 
@@ -138,7 +138,7 @@ The file is then at `SangamMobile\android\app\build\outputs\apk\release\app-rele
 | Account sign-in temporarily unavailable | All three GitHub settings are present and a new APK was built; Project ID is the text ID |
 | Email registration/login unavailable | Identity Platform is enabled and Email/Password is enabled in the same project |
 | Google picker fails | Android OAuth package and SHA-1 match the installed APK; web client ID is configured; test account is allowed |
-| Google account is selected but login fails | Google provider has the matching Web Client ID/secret; `shreeswayam.tech` is authorized; API key belongs to the same project |
+| Google account is selected but login fails | Google provider has the matching Web Client ID/secret; API key and OAuth clients belong to the same project |
 | Session cannot be restored | Sign in again; project/key changes or a revoked account can invalidate tokens |
 
 Live sign-in must be tested with your Cloud configuration on a physical Android device; repository tests do not validate an owner's unconfigured project.
@@ -147,4 +147,4 @@ Official guides: [Identity Platform REST API](https://docs.cloud.google.com/iden
 
 ## Automated build configuration check
 
-The APK workflow now verifies that the three settings are present and formatted correctly, checks the project/API-key/OAuth-client association and authorized domain with Google, verifies the Google provider client ID, and probes password sign-in using a random reserved-domain identifier without creating an account. It logs only status messages. Some legacy public project responses return only a numeric project number; in that case the check reports that text Project ID ownership could not be confirmed. Native Android OAuth package/certificate registration and actual member sign-in must still be tested on a device.
+The APK workflow now verifies that the three settings are present and formatted correctly, checks the project/API-key/OAuth-client association with Google and uses an existing authorized domain for its provider probe, verifies the Google provider client ID, and probes password sign-in using a random reserved-domain identifier without creating an account. It logs only status messages. Some legacy public project responses return only a numeric project number; in that case the check reports that text Project ID ownership could not be confirmed. Native Android OAuth package/certificate registration and actual member sign-in must still be tested on a device.

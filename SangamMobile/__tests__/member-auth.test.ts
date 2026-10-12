@@ -56,6 +56,9 @@ test('email signup uses Google Cloud Identity Platform and never persists a pass
 test('Google credentials must be verified by Identity Platform', async () => {
   expect((await googleSignIn()).token).toBe('verified-cloud-token');
   expect(fetchMock.mock.calls[0][0]).toContain('accounts:signInWithIdp');
+  expect(JSON.parse(fetchMock.mock.calls[0][1].body).requestUri).toBe(
+    'http://localhost',
+  );
   expect(JSON.parse(fetchMock.mock.calls[0][1].body).postBody).toBe(
     'id_token=google-token&providerId=google.com',
   );

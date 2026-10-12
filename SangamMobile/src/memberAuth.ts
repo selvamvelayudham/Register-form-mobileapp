@@ -143,7 +143,9 @@ export async function googleSignIn() {
   return session(
     await accounts('signInWithIdp', {
       postBody: `id_token=${encodeURIComponent(idToken)}&providerId=google.com`,
-      requestUri: 'https://shreeswayam.tech',
+      // Google documents this marker for manually supplied native ID tokens.
+      // It is request data only; all network requests still use HTTPS.
+      requestUri: 'http://localhost',
       returnSecureToken: true,
       returnIdpCredential: true,
     }),
